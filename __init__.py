@@ -7,8 +7,8 @@ NODE_CLASS_MAPPINGS = {
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "ZoomSequenceNode": "Zoom Sequence (Single Batch)",
-    "ZoomSequenceBatchNode": "Zoom Sequence (Batched)",
+    "ZoomSequenceNode": "Zoom Sequence (In/Out, Easing)",
+    "ZoomSequenceBatchNode": "Batch Zoom Sequence (In/Out, Easing)",
 }
 
 __all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS"]

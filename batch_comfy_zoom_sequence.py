@@ -255,4 +255,4 @@ class ZoomSequenceNode:
 
 # ---------- REGISTRATION ------------------------------------------------------
 NODE_CLASS_MAPPINGS = {"ZoomSequenceBatchNode": ZoomSequenceNode}
-NODE_DISPLAY_NAME_MAPPINGS = {"ZoomSequenceBatchNode": "Zoom Sequence (Batched)"}
+NODE_DISPLAY_NAME_MAPPINGS = {"ZoomSequenceBatchNode": "Batch Zoom Sequence (In/Out, Easing)"}
