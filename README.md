@@ -190,7 +190,7 @@ Info: reached final frame; zoom state has been reset.
 
 # 👤 Credits
 
-Created by **Your Name**
+Created by **dansco**
 Compatible with ComfyUI + PyTorch ≥ 1.10
 
 ---
@@ -198,12 +198,3 @@ Compatible with ComfyUI + PyTorch ≥ 1.10
 # 📜 License
 
 MIT License
-
----
-
-If you'd like, I can also:
-
-✅ Add animated GIF examples
-✅ Add a usage diagram
-✅ Include a troubleshooting section
-✅ Make the README prettier with icons and screenshots
