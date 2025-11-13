@@ -1,124 +1,209 @@
-# 🌀 ComfyUI Zoom Sequence Node
+✅ Two separate nodes
 
-A **ComfyUI custom node** that performs smooth, aspect-preserving **Zoom In** and **Zoom Out** effects over image sequences or video frames.  
-It maintains the original **canvas size** and **aspect ratio** while applying customizable zoom speed and easing curves.
+* **Zoom Sequence (Single Batch)**
+* **Zoom Sequence (Batched, with persistent zoom state)**
 
----
-
-## ✨ Features
-- 🎞️ Works with **videos**, **image sequences**, or **image lists**
-- 🔍 True aspect-preserving **Zoom In** / **Zoom Out**
-- ⚙️ Configurable **Pixels per frame** (supports fractional values, e.g. `1.5`)
-- 🧩 Smooth **easing options**: `Linear`, `Ease_In`, `Ease_Out`, `Ease_In_Out`
-- 🖼️ Canvas size and proportions always stay the same
-- ⚡ GPU-accelerated with PyTorch (no extra dependencies)
+✅ Updated installation & file list
+✅ Clear explanation of what each node does
+✅ Matches your two-file setup (`comfy_zoom_sequence.py` + `batch_comfy_zoom_sequence.py`)
 
 ---
 
-## 🧩 Inputs & Outputs
+# 🌀 ComfyUI Zoom Sequence Nodes
 
-### **Inputs**
-| Name | Type | Description |
-|------|------|-------------|
-| `images` | `IMAGE` | Sequence of frames (`[B, H, W, C]`) from a video or image list |
-| `mode` | `Zoom In` / `Zoom Out` | Zoom direction. *Zoom In* progressively crops inward; *Zoom Out* reverses it |
-| `pixels_per_frame` | `FLOAT` | Number of **pixels per frame (per-side)** on the **smaller image dimension**. Supports fractional values (e.g. `1.5`) for finer control |
-| `ease` | `STRING` | Easing curve controlling zoom speed over time: `Linear`, `Ease_In`, `Ease_Out`, or `Ease_In_Out` |
+A pair of **ComfyUI custom nodes** for smooth, aspect-preserving zooming across image sequences or video frames.
+
+You now have **two versions**:
+
+1. **Zoom Sequence (Single Batch)**
+   – Operates on a single batch of images
+   – No state saved between runs
+   – Ideal for small clips, static workflows, or one-off zooms
+
+2. **Zoom Sequence (Batched)**
+   – Maintains **persistent state** across batches
+   – Automatically resets state when the final frame is reached
+   – Perfect for long videos processed in chunks
+
+Both nodes preserve canvas size and aspect ratio, and both support easing + pixel-per-frame zoom speed.
 
 ---
 
-### **Outputs**
-| Name | Type | Description |
-|------|------|-------------|
-| `images` | `IMAGE` | Sequence of zoomed frames (same dimensions as input) |
-| `info` | `STRING` | Text summary of zoom parameters, margins, and aspect adjustments |
+## ✨ Features (Shared by Both Nodes)
+
+* 🎞️ Works with **video frames**, **image sequences**, or **batched images**
+* 🔍 Aspect-preserving **Zoom In** / **Zoom Out**
+* ⚡ Smooth easing curves:
+
+  * `Linear`
+  * `Ease_In`
+  * `Ease_Out`
+  * `Ease_In_Out`
+* 📏 Precise pixel-per-frame zoom speed (fractional values allowed)
+* 🖼️ Output keeps original canvas size
+* 🔋 GPU-accelerated with PyTorch
 
 ---
 
-## ⚙️ Installation
+# 📦 Node Overview
 
-1. Go to your **ComfyUI/custom_nodes/** folder.
-2. Create a new folder, e.g.:
-   ```
-   ComfyUI/custom_nodes/ComfyZoomSequence/
-   ```
-3. Copy the following files into it:
-   ```
-   comfy_zoom_sequence.py
-   __init__.py
-   requirements.txt
-   ```
-4. Restart ComfyUI.
+## 1. **Zoom Sequence (Single Batch)**
+
+*File: `comfy_zoom_sequence.py` *
+
+A simple, stateless zoom processor that computes zoom for **only the current batch**.
+
+### Inputs
+
+| Name               | Type                   | Description                         |
+| ------------------ | ---------------------- | ----------------------------------- |
+| `images`           | `IMAGE`                | Batch `[B, H, W, C]`                |
+| `mode`             | `Zoom In` / `Zoom Out` | Zoom direction                      |
+| `pixels_per_frame` | `FLOAT`                | Crop per-side on smallest dimension |
+| `ease`             | `STRING`               | Zoom timing curve                   |
+
+### Outputs
+
+| Name     | Type     | Description     |
+| -------- | -------- | --------------- |
+| `images` | `IMAGE`  | Zoomed images   |
+| `info`   | `STRING` | Diagnostic info |
+
+---
+
+## 2. **Zoom Sequence (Batched)**
+
+_File: `batch_comfy_zoom_sequence.py` _
+
+Advanced version with persistent state used for **multi-batch long videos**.
+
+### Key differences:
+
+✔ Tracks global frame index across multiple runs
+✔ Applies continuous zoom over all batches
+✔ Clears state automatically when:
+
+> the last processed frame equals `source_frame_count - 1`
+
+### Inputs
+
+| Name                 | Type                   | Description                    |
+| -------------------- | ---------------------- | ------------------------------ |
+| `images`             | `IMAGE`                | Batch `[B, H, W, C]`           |
+| `source_frame_count` | `INT`                  | Total frames in the full video |
+| `mode`               | `Zoom In` / `Zoom Out` | Zoom direction                 |
+| `pixels_per_frame`   | `FLOAT`                | Crop per-side speed            |
+| `ease`               | `STRING`               | Easing curve                   |
+
+### Outputs
+
+| Name     | Type     | Description                             |
+| -------- | -------- | --------------------------------------- |
+| `images` | `IMAGE`  | Zoomed output                           |
+| `info`   | `STRING` | State info, margins, global frame range |
+
+---
+
+# 📁 Installation
+
+1. Go to your **ComfyUI/custom_nodes/** directory
+2. Create a folder:
+
+```
+ComfyUI/custom_nodes/ComfyZoomSequence/
+```
+
+3. Place these files inside:
+
+```
+comfy_zoom_sequence.py
+batch_comfy_zoom_sequence.py
+__init__.py
+README.md
+requirements.txt (optional)
+```
 
 ### Folder structure
+
 ```
 ComfyUI/
 └─ custom_nodes/
    └─ ComfyZoomSequence/
       ├─ comfy_zoom_sequence.py
+      ├─ batch_comfy_zoom_sequence.py
       ├─ __init__.py
+      ├─ README.md
       └─ requirements.txt
 ```
 
 ---
 
-## 🧰 Requirements
-```text
-torch>=1.10
-```
-ComfyUI already includes PyTorch; this line simply ensures version compatibility for external installs.
+# 💡 Usage Examples
 
----
-
-## 🪄 Usage Example
-
-Typical workflow:
+## Workflow for Single Batch Node
 
 ```
-[Load Video / Image Sequence]
-          │
+[Load Video Frame Batch]
           ▼
- [Zoom Sequence (Zoom In/Out, Easing)]
-          │
-          ├─▶ (images) → [Save Video] or [Preview Image]
-          └─▶ (info)   → [Print Text] or [Console Log]
+[Zoom Sequence (Single Batch)]
+          ▼
+[Save Video]
 ```
 
-### Example parameters:
-| Parameter | Example | Description |
-|------------|----------|-------------|
-| `mode` | `Zoom In` | Zooms progressively inward |
-| `pixels_per_frame` | `1.5` | Crops 1.5px per side per frame (on the smaller image dimension) |
-| `ease` | `Ease_In_Out` | Starts and ends smoothly |
-
----
-
-## 🧪 Example Output
-When you run the node, the `info` output will look something like:
+## Workflow for Batched Node (Long Videos)
 
 ```
-Frames: 120, Canvas: 1920x1080, Mode: Zoom In, Ease: Ease_In_Out
-Requested small-dim max margin: 178.50 px
-Applied small-dim max margin:   178.50 px (safe limit: 539 px)
-Note: margins are proportional per axis to preserve aspect; integer crop indices are used.
+[Load Video → Batches]
+          ▼
+[Zoom Sequence (Batched)]
+          ▼
+[Save Video]
+(Repeat for all chunks)
+```
+
+The batched version will automatically resume the zoom from where the last batch ended.
+
+---
+
+# 🧪 Example Info Output
+
+```
+Batch frames: 32, Canvas: 1920x1080, Mode: Zoom In, Ease: Ease_In_Out
+Source frame count: 240
+Global frames processed in this call: 96..127
+Applied small-dim max margin: 88.00 px (safe limit: 539 px)
+Note: zoom continuity is preserved across batches via a temp state file.
+Info: reached final frame; zoom state has been reset.
 ```
 
 ---
 
-## 💡 Notes
-- Keeps **original aspect ratio** and **canvas size** exactly.
-- Works seamlessly with **Load Video**, **Batch Images**, and **Save Video** nodes.
-- `pixels_per_frame` applies to the **smaller image dimension** for proportional scaling.
-- Fractional pixel speeds (e.g. `1.25`) are supported and automatically rounded during cropping.
-- Margins are clamped so crops never exceed safe limits.
+# 📘 Notes
+
+* Both nodes **preserve aspect ratio exactly**
+* Batched version uses a temp JSON state file
+* State resets automatically at end of clip
+* Safe cropping prevents invalid or empty slices
+* Fractional `pixels_per_frame` is allowed and recommended for smooth zooms
 
 ---
 
-## 🧑‍💻 Credits
-Created by [Your Name or Handle]  
-Tested with ComfyUI portable and PyTorch 2.7.1+cu128.
+# 👤 Credits
+
+Created by **Your Name**
+Compatible with ComfyUI + PyTorch ≥ 1.10
 
 ---
 
-## 📜 License
+# 📜 License
+
 MIT License
+
+---
+
+If you'd like, I can also:
+
+✅ Add animated GIF examples
+✅ Add a usage diagram
+✅ Include a troubleshooting section
+✅ Make the README prettier with icons and screenshots
