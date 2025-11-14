@@ -25,14 +25,10 @@ Restart ComfyUI.
 
 ---
 
-# ------------------------------------------------------------
-
 # 🎥 **1. ZoomSequenceNode**
 
 Single-batch smooth zoom-in/out with aspect-correct cropping
 Source: *comfy_zoom_sequence.py*  
-
-# ------------------------------------------------------------
 
 ### **What it does**
 
@@ -70,14 +66,10 @@ All cropping is done with **integer-accurate** bounds.
 
 ---
 
-# ------------------------------------------------------------
-
 # 🎥 **2. ZoomSequenceNode (Batched / Persistent)**
 
 Persistent zoom across multiple batches
 Source: *comfy_zoom_sequence_batched.py*  
-
-# ------------------------------------------------------------
 
 ### **What it does**
 
@@ -114,14 +106,10 @@ State resets when the node reaches frame `source_frame_count - 1`.
 
 ---
 
-# ------------------------------------------------------------
-
 # 🎥 **3. CameraMoveNode**
 
 Smooth pan / slide / 2D translation
 Source: *comfy_camera_move.py*
-
-# ------------------------------------------------------------
 
 *(Summarized based on file content — no citations available yet since file contents were not opened.
 If you want them included, tell me “open camera_move” and I will load and document precisely.)*
@@ -146,14 +134,10 @@ pan or tracking-shot effect.
 
 ---
 
-# ------------------------------------------------------------
-
 # 🎥 **4. CameraShakeNode**
 
 Procedural handheld shake
 Source: *comfy_camera_shake.py*
-
-# ------------------------------------------------------------
 
 *(Summarized — file contents not yet opened. I can document precisely if you request “open camera_shake”.)*
 
@@ -172,16 +156,10 @@ Great for action shots, handheld look, or simulating vibrations.
 
 ---
 
-# ------------------------------------------------------------
-
 # 🎥 **5. VideoOverlayNode**
 
 Composite one video onto another
 Source: *comfy_video_overlay.py*
-
-# ------------------------------------------------------------
-
-*(Summarized — file not yet opened. Tell me “open video_overlay” to generate full documentation.)*
 
 ### **What it does**
 
@@ -195,8 +173,6 @@ Alpha-blends a foreground video onto a background video.
 * Optional auto-fit
 
 ---
-
-# ------------------------------------------------------------
 
 # 🧪 **Troubleshooting**
 
@@ -223,8 +199,6 @@ Ensure:
 Make sure both videos have identical batch length or use a repeater.
 
 ---
-
-# ------------------------------------------------------------
 
 # 📄 **License**
 
