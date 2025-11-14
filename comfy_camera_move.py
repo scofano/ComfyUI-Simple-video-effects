@@ -79,6 +79,14 @@ class CameraMoveNode:
     RETURN_NAMES = ("images", "info",)
     FUNCTION = "run"
     CATEGORY = "Utilities/Transforms"
+    
+    def IS_CHANGED(self, images, direction, distance_px, duration_s, ease):
+        # When direction is Random, force ComfyUI to treat this node
+        # as changed every time (NaN != NaN, so cache can't match).
+        if direction == "Random":
+            return float("NaN")
+        # For non-random directions, normal caching behavior
+        return None
 
     # ---- main ---------------------------------------------------------------
     def run(self, images: torch.Tensor, direction: str, distance_px: float,
