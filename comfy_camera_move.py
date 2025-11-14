@@ -30,27 +30,30 @@ class CameraMoveNode:
     Camera move / directional pan for a batched IMAGE (video/sequence).
 
     Canvas size stays fixed. To avoid black borders, the input is uniformly
-    scaled up (keeping aspect ratio) so that along the movement axis there is
-    at least `distance_px` extra pixels, and each frame is a crop that slides
+    scaled up (keeping aspect ratio) so that along each movement axis there is
+    at least `distance_px` extra pixels. Each frame is then a crop that slides
     across this larger image.
 
     Directions
     ----------
-    Top:
-      - Scale image so height = H + distance_px (width scaled proportionally).
-      - Crop at top at t=0, move the crop downward over time.
-    Bottom:
-      - Same scaling, but crop moves upward over time.
-    Left / Right:
-      - Similar, but scale based on width and move horizontally.
-    Random:
-      - On each run, randomly picks one of Top/Bottom/Left/Right and uses it
-        for the whole sequence.
+    Horizontal:
+      - None  : no horizontal move
+      - Left  : crop moves from left to right
+      - Right : crop moves from right to left
+      - Random: randomly chooses Left or Right once per run
+
+    Vertical:
+      - None  : no vertical move
+      - Top   : crop moves from top to bottom
+      - Bottom: crop moves from bottom to top
+      - Random: randomly chooses Top or Bottom once per run
+
+    You can combine them (e.g. Left + Top) to get diagonal movement.
 
     Parameters
     ----------
     distance_px (FLOAT):
-        Total camera travel in pixels over the whole sequence.
+        Total camera travel in pixels over the whole sequence, per active axis.
     duration_s (FLOAT):
         Duration in seconds that this camera move represents (for info only).
     ease: "Linear", "Ease_In", "Ease_Out", "Ease_In_Out"
@@ -62,9 +65,13 @@ class CameraMoveNode:
         return {
             "required": {
                 "images": ("IMAGE",),
-                "direction": (
-                    ["Left", "Right", "Top", "Bottom", "Random"],
-                    {"default": "Top"},
+                "horizontal_direction": (
+                    ["None", "Left", "Right", "Random"],
+                    {"default": "None"},
+                ),
+                "vertical_direction": (
+                    ["None", "Top", "Bottom", "Random"],
+                    {"default": "None"},
                 ),
                 "distance_px": ("FLOAT", {"default": 100.0, "min": 0.0, "step": 1.0}),
                 "duration_s": ("FLOAT", {"default": 5.0, "min": 0.0, "step": 0.1}),
@@ -79,18 +86,31 @@ class CameraMoveNode:
     RETURN_NAMES = ("images", "info",)
     FUNCTION = "run"
     CATEGORY = "Utilities/Transforms"
-    
-    def IS_CHANGED(self, images, direction, distance_px, duration_s, ease):
-        # When direction is Random, force ComfyUI to treat this node
-        # as changed every time (NaN != NaN, so cache can't match).
-        if direction == "Random":
-            return float("NaN")
-        # For non-random directions, normal caching behavior
+
+    # Tell Comfy when to re-run this node instead of using cache
+    @classmethod
+    def IS_CHANGED(cls,
+                   images,
+                   horizontal_direction,
+                   vertical_direction,
+                   distance_px,
+                   duration_s,
+                   ease):
+        # If any direction is Random, force a change every execution
+        if horizontal_direction == "Random" or vertical_direction == "Random":
+            # NaN is never equal to itself, so cache can't match -> always recompute
+            return float("nan")
+        # Normal caching behavior otherwise
         return None
 
     # ---- main ---------------------------------------------------------------
-    def run(self, images: torch.Tensor, direction: str, distance_px: float,
-            duration_s: float, ease: str):
+    def run(self,
+            images: torch.Tensor,
+            horizontal_direction: str,
+            vertical_direction: str,
+            distance_px: float,
+            duration_s: float,
+            ease: str):
 
         if images.ndim != 4:
             return (images, "Input is not a batched IMAGE (B,H,W,C).")
@@ -99,53 +119,57 @@ class CameraMoveNode:
         if B <= 0:
             return (images, "Empty batch; nothing to do.")
 
-        # Normalize parameters
-        dir_key = direction.strip().lower()
         dist = max(0.0, float(distance_px))
         dist_int = int(round(dist))
 
-        # Resolve Random direction once per run
-        effective_dir = dir_key
-        if dir_key == "random":
-            # 0: left, 1: right, 2: top, 3: bottom
-            idx = int(torch.randint(0, 4, (1,)).item())
-            effective_dir = ["left", "right", "top", "bottom"][idx]
+        # Resolve directions / randoms
+        hdir_key = horizontal_direction.strip().lower()
+        vdir_key = vertical_direction.strip().lower()
 
-        if dist_int == 0:
-            # No movement requested, just return original
+        # Resolve random horizontally
+        if hdir_key == "random":
+            # choose left or right once per run
+            idx = int(torch.randint(0, 2, (1,)).item())
+            hdir_eff = ["left", "right"][idx]
+        else:
+            hdir_eff = hdir_key
+
+        # Resolve random vertically
+        if vdir_key == "random":
+            idx = int(torch.randint(0, 2, (1,)).item())
+            vdir_eff = ["top", "bottom"][idx]
+        else:
+            vdir_eff = vdir_key
+
+        move_x = hdir_eff in ("left", "right")
+        move_y = vdir_eff in ("top", "bottom")
+
+        # If no movement or zero distance, just return original
+        if dist_int == 0 or (not move_x and not move_y):
             info = (
                 f"Frames: {B}, Canvas: {W}x{H}\n"
-                f"Direction: {direction} (resolved: {effective_dir.title()}), "
-                f"Distance: 0px, Ease: {ease}\n"
+                f"Horizontal: {horizontal_direction} (resolved: {hdir_eff.title() if hdir_eff != 'none' else 'None'}), "
+                f"Vertical: {vertical_direction} (resolved: {vdir_eff.title() if vdir_eff != 'none' else 'None'}), "
+                f"Distance: {dist_int}px, Ease: {ease}\n"
                 f"Duration: {duration_s:.2f}s\n"
-                "No movement applied (distance_px = 0)."
+                "No movement applied (either distance_px = 0 or both directions are None)."
             )
             return (images, info)
 
-        # Decide which axis we move along and compute target size
-        move_axis = None  # "x" or "y"
-        if effective_dir in ("left", "right"):
-            move_axis = "x"
-            target_w = W + dist_int
-            scale = target_w / float(W)
-            target_h = int(round(H * scale))
-        elif effective_dir in ("top", "bottom"):
-            move_axis = "y"
-            target_h = H + dist_int
-            scale = target_h / float(H)
-            target_w = int(round(W * scale))
-        else:
-            # Fallback: no movement axis, center crop only
-            move_axis = None
-            target_h, target_w = H, W
+        # Desired overscan in each axis
+        target_w = W + dist_int if move_x else W
+        target_h = H + dist_int if move_y else H
 
-        newH, newW = target_h, target_w
+        # Uniform scale to cover both overscans (keep aspect ratio)
+        scale = max(target_w / float(W), target_h / float(H))
+        newW = int(round(W * scale))
+        newH = int(round(H * scale))
 
         # Convert to BCHW for interpolation
         imgs_nchw = images.permute(0, 3, 1, 2)
 
-        # Uniform scale up (keeps proportions)
-        imgs_big = torch.nn.functional.interpolate(
+        # Uniform scale up
+        imgs_big = F.interpolate(
             imgs_nchw,
             size=(newH, newW),
             mode="bicubic",
@@ -156,65 +180,60 @@ class CameraMoveNode:
         ts = [0.0] if B == 1 else [i / (B - 1) for i in range(B)]
         es = [ease_value(t, ease) for t in ts]
 
+        max_off_x = max(0, newW - W)
+        max_off_y = max(0, newH - H)
+
         crops = []
 
         for i in range(B):
             e = es[i]
             frame = imgs_big[i]  # (C, newH, newW)
 
-            if move_axis == "y":
-                # vertical move: crop slides along height
-                max_off_y = newH - H  # should be == dist_int
-                if effective_dir == "top":
-                    start_off = 0
-                    end_off = max_off_y
-                else:  # "bottom"
-                    start_off = max_off_y
-                    end_off = 0
-
-                offset = start_off + (end_off - start_off) * e
-                y0 = int(round(offset))
-                y0 = max(0, min(max_off_y, y0))
-                y1 = y0 + H
-
-                # horizontally center the crop
-                max_off_x = newW - W
-                x0 = max(0, max_off_x // 2)
-                x1 = x0 + W
-
-                crop = frame[:, y0:y1, x0:x1]
-
-            elif move_axis == "x":
-                # horizontal move: crop slides along width
-                max_off_x = newW - W  # should be == dist_int
-                if effective_dir == "left":
-                    start_off = 0
-                    end_off = max_off_x
+            # Horizontal offset
+            if move_x and max_off_x > 0:
+                if hdir_eff == "left":
+                    start_x = 0
+                    end_x = max_off_x
                 else:  # "right"
-                    start_off = max_off_x
-                    end_off = 0
-
-                offset = start_off + (end_off - start_off) * e
-                x0 = int(round(offset))
+                    start_x = max_off_x
+                    end_x = 0
+                offset_x = start_x + (end_x - start_x) * e
+                x0 = int(round(offset_x))
                 x0 = max(0, min(max_off_x, x0))
-                x1 = x0 + W
-
-                # vertically center the crop
-                max_off_y = newH - H
-                y0 = max(0, max_off_y // 2)
-                y1 = y0 + H
-
-                crop = frame[:, y0:y1, x0:x1]
-
             else:
-                # fallback: center crop (no move)
-                y0 = max(0, (newH - H) // 2)
-                x0 = max(0, (newW - W) // 2)
-                crop = frame[:, y0:y0+H, x0:x0+W]
+                # center if no movement on X
+                x0 = max_off_x // 2
+
+            x1 = x0 + W
+            if x1 > newW:
+                x1 = newW
+                x0 = newW - W
+
+            # Vertical offset
+            if move_y and max_off_y > 0:
+                if vdir_eff == "top":
+                    start_y = 0
+                    end_y = max_off_y
+                else:  # "bottom"
+                    start_y = max_off_y
+                    end_y = 0
+                offset_y = start_y + (end_y - start_y) * e
+                y0 = int(round(offset_y))
+                y0 = max(0, min(max_off_y, y0))
+            else:
+                # center if no movement on Y
+                y0 = max_off_y // 2
+
+            y1 = y0 + H
+            if y1 > newH:
+                y1 = newH
+                y0 = newH - H
+
+            crop = frame[:, y0:y1, x0:x1]
 
             # Safety: ensure crop size matches original canvas
             if crop.shape[1] != H or crop.shape[2] != W:
-                crop = torch.nn.functional.interpolate(
+                crop = F.interpolate(
                     crop.unsqueeze(0),
                     size=(H, W),
                     mode="bicubic",
@@ -234,9 +253,12 @@ class CameraMoveNode:
         info_lines = []
         info_lines.append(f"Frames: {B}, Canvas: {W}x{H}")
         info_lines.append(
-            f"Direction: {direction} (resolved: {effective_dir.title()}), "
-            f"Distance: {dist_int}px, Ease: {ease}"
+            "Horizontal: "
+            f"{horizontal_direction} (resolved: {hdir_eff.title() if hdir_eff != 'none' else 'None'}), "
+            "Vertical: "
+            f"{vertical_direction} (resolved: {vdir_eff.title() if vdir_eff != 'none' else 'None'})"
         )
+        info_lines.append(f"Distance per axis: {dist_int}px, Ease: {ease}")
         info_lines.append(f"Duration: {duration_s:.2f}s")
         if fps is not None:
             info_lines.append(f"Implied FPS (based on duration): {fps:.3f}")
