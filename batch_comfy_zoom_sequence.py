@@ -73,7 +73,7 @@ class ZoomSequenceNode:
                 "images": ("IMAGE",),
                 "source_frame_count": ("INT", {"default": 1, "min": 1, "max": 100000}),
                 "mode": (["Zoom In", "Zoom Out"], {"default": "Zoom In"}),
-                "pixels_per_frame": ("FLOAT", {"default": 1.0, "min": 0.0, "step": 0.1}),
+                "pixels_per_frame": ("FLOAT", {"default": 1.0, "min": 0.0, "step": 0.05}),
                 "ease": (["Linear", "Ease_In", "Ease_Out", "Ease_In_Out"], {"default": "Linear"}),
             }
         }
@@ -252,7 +252,3 @@ class ZoomSequenceNode:
         info = "\n".join(info_lines)
 
         return (out, info)
-
-# ---------- REGISTRATION ------------------------------------------------------
-NODE_CLASS_MAPPINGS = {"ZoomSequenceBatchNode": ZoomSequenceNode}
-NODE_DISPLAY_NAME_MAPPINGS = {"ZoomSequenceBatchNode": "Batch Zoom Sequence (In/Out, Easing)"}

@@ -189,7 +189,3 @@ class ZoomSequenceNode:
         info = "\n".join(info_lines)
 
         return (out, info)
-
-# ---------- REGISTRATION ------------------------------------------------------
-NODE_CLASS_MAPPINGS = {"ZoomSequenceNode": ZoomSequenceNode}
-NODE_DISPLAY_NAME_MAPPINGS = {"ZoomSequenceNode": "Zoom Sequence (In/Out, Easing)"}
