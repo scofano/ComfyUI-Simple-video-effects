@@ -87,7 +87,7 @@ class ComfyVideoCombiner:
                 }),
                 "fade_in_color": ("STRING", {
                     "default": "#000000",
-                    "multiline": True,
+                    "multiline": False,
                     "placeholder": "#000000",
                     "label": "Fade in color (hex)"
                 }),
@@ -100,7 +100,7 @@ class ComfyVideoCombiner:
                     "label": "Fade in duration (s)"
                 }),
                 "fade_out_enabled": ("BOOLEAN", {
-                    "default": False,
+                    "default": True,
                     "label": "Enable fade out to color"
                 }),
                 "fade_out_color": ("STRING", {
@@ -125,7 +125,7 @@ class ComfyVideoCombiner:
     RETURN_NAMES = ("output_path",)
     FUNCTION = "combine_videos"
     CATEGORY = "Video"
-    OUTPUT_NODE = False
+    OUTPUT_NODE = True
 
     def __init__(self):
         # Use a default output directory (ComfyUI's default output, if available).
