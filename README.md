@@ -178,7 +178,7 @@ Here’s a clean **Markdown README description** for the script, based on the up
 
 ---
 
-# Comfy Video Combiner
+# 🎥 **6. Comfy Video Combiner
 
 This script provides a **ComfyUI-compatible node** for automatically combining multiple video files from a directory into a single edited output.
 It offers robust handling of transitions, fades, audio overlays, randomization, and resolution normalization—all wrapped in an easy-to-use, configurable ComfyUI node.
@@ -308,23 +308,6 @@ Quiet ffmpeg execution ensures efficient rendering.
 ### 5. Cleanup
 
 Temporary files (WAV audio, concat lists) are deleted automatically.
-
----
-
-## 📦 Installation (ComfyUI Custom Node)
-
-Place the script inside:
-
-```
-ComfyUI/custom_nodes/
-```
-
-Restart ComfyUI.
-The node will appear under:
-
-```
-Video → ComfyVideoCombiner
-```
 
 ---
 
