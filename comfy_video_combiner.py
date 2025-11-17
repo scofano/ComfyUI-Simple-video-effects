@@ -59,7 +59,7 @@ class ComfyVideoCombiner:
             },
             "optional": {
                 "sort_files": ("BOOLEAN", {
-                    "default": True,
+                    "default": False,
                     "label": "Sort files alphabetically"
                 }),
                 "random_order": ("BOOLEAN", {
@@ -82,17 +82,17 @@ class ComfyVideoCombiner:
 
                 # Fade in/out controls
                 "fade_in_enabled": ("BOOLEAN", {
-                    "default": False,
+                    "default": True,
                     "label": "Enable fade in from color"
                 }),
                 "fade_in_color": ("STRING", {
                     "default": "#000000",
-                    "multiline": False,
+                    "multiline": True,
                     "placeholder": "#000000",
                     "label": "Fade in color (hex)"
                 }),
                 "fade_in_duration": ("FLOAT", {
-                    "default": 1.0,
+                    "default": 0.5,
                     "min": 0.1,
                     "max": 10.0,
                     "step": 0.1,
@@ -110,7 +110,7 @@ class ComfyVideoCombiner:
                     "label": "Fade out color (hex)"
                 }),
                 "fade_out_duration": ("FLOAT", {
-                    "default": 1.0,
+                    "default": 0.5,
                     "min": 0.1,
                     "max": 10.0,
                     "step": 0.1,
@@ -125,6 +125,7 @@ class ComfyVideoCombiner:
     RETURN_NAMES = ("output_path",)
     FUNCTION = "combine_videos"
     CATEGORY = "Video"
+    OUTPUT_NODE = False
 
     def __init__(self):
         # Use a default output directory (ComfyUI's default output, if available).
@@ -132,19 +133,33 @@ class ComfyVideoCombiner:
 
     def _get_default_output_directory(self) -> str:
         """
-        Try to get ComfyUI's default output directory (e.g. 'output') from environment
-        variables or fallback to current directory.
+        Try to get ComfyUI's default output directory (e.g. 'output' inside 'ComfyUI' root)
+        or fallback to current directory.
         """
-        # Adjust this logic as needed in your actual ComfyUI environment.
-        comfy_env_output = os.environ.get("COMFYUI_OUTPUT_DIR")
-        if comfy_env_output and os.path.isdir(comfy_env_output):
-            return comfy_env_output
-
+        # --- FIX: Directly target 'ComfyUI/output' relative to the ComfyUI root if possible ---
         try:
-            # Try a typical ComfyUI-style 'output' directory
-            fallback_dir = os.path.join(os.getcwd(), "output")
+            # Assuming the script runs from 'ComfyUI/custom_nodes/...'
+            # We want to go up to the ComfyUI root and then to 'output'
+            
+            # Find the root (where ComfyUI.exe or run_webui.bat/sh would be)
+            # This is a robust way to find the main ComfyUI folder:
+            current_path = Path(__file__).resolve()
+            comfy_root = None
+            for parent in current_path.parents:
+                if parent.name == "ComfyUI":
+                    comfy_root = parent.parent # Go up one more to the root *containing* ComfyUI
+                    break
+            
+            if comfy_root:
+                 # Standard ComfyUI output is 'ComfyUI/output'
+                 fallback_dir = comfy_root / "ComfyUI" / "output"
+            else:
+                 # Fallback to current working directory if root can't be inferred
+                 fallback_dir = Path(os.getcwd()) / "output"
+
+
             os.makedirs(fallback_dir, exist_ok=True)
-            return fallback_dir
+            return str(fallback_dir)
         except Exception:
             # Last resort: current directory
             fallback_dir = os.getcwd()
