@@ -174,6 +174,168 @@ Alpha-blends a foreground video onto a background video.
 
 ---
 
+Here’s a clean **Markdown README description** for the script, based on the uploaded file ****.
+
+---
+
+# Comfy Video Combiner
+
+This script provides a **ComfyUI-compatible node** for automatically combining multiple video files from a directory into a single edited output.
+It offers robust handling of transitions, fades, audio overlays, randomization, and resolution normalization—all wrapped in an easy-to-use, configurable ComfyUI node.
+
+> **Inspired by:**
+> [DarioFT / ComfyUI-VideoDirCombiner](https://github.com/DarioFT/ComfyUI-VideoDirCombiner)
+
+---
+
+## ✨ Features
+
+### 🔍 Directory Scanning & File Control
+
+* Scans a target directory for video files matching a pattern (e.g., `*.mp4`).
+* Supports alphabetical sorting.
+* Supports randomized order with optional seed.
+* Guarantees no repeated clips.
+
+### 🎬 Video Transitions & Fades
+
+* Optional **crossfade transitions** between clips.
+* Optional **fade-in** from a solid color.
+* Optional **fade-out** to a solid color.
+* All fade colors sanitized to `#RRGGBB`.
+
+### 🔊 Audio Integration (VideoHelperSuite)
+
+* Accepts **VHS/ComfyUI audio format** input.
+* Supports both:
+
+  * Direct audio file paths, or
+  * Waveform + sample rate tensors (auto-converted to WAV).
+* Optional trimming of final video to match audio duration.
+* Final fade-out will automatically adjust to audio length if needed.
+
+### ⚙️ Resolution & FPS Normalization
+
+* Detects the first video’s:
+
+  * width
+  * height
+  * FPS
+* Normalizes all clips (and color fades) to match it, ensuring alignment and avoiding FPS-related errors.
+
+### 🚀 Performance
+
+* Uses **parallel duration probing** (ThreadPoolExecutor).
+* Uses optimized ffmpeg filter-graphs for transitions.
+* Automatic cleanup of temporary files.
+
+### 🧪 Safety & Robustness
+
+* Unique output filenames (avoids overwriting).
+* Detailed validation and error messages.
+* Proper handling of edge cases like:
+
+  * Clips shorter than transition duration
+  * Invalid hex color input
+  * Missing or malformed audio dicts
+
+---
+
+## 🛠️ Inputs
+
+### Required Inputs
+
+| Name                  | Type   | Description                       |
+| --------------------- | ------ | --------------------------------- |
+| `directory_path`      | String | Folder containing video files     |
+| `output_filename`     | String | Name of final output file         |
+| `file_pattern`        | String | File glob pattern (e.g., `*.mp4`) |
+| `transition`          | Select | `none` or `fade` between clips    |
+| `transition_duration` | Float  | Fade duration between clips       |
+
+### Optional Inputs
+
+| Name                | Type    | Purpose                        |
+| ------------------- | ------- | ------------------------------ |
+| `sort_files`        | Boolean | Sort clips alphabetically      |
+| `random_order`      | Boolean | Shuffle order (overrides sort) |
+| `seed`              | Int     | Seeded randomization           |
+| `music_track`       | AUDIO   | VideoHelperSuite audio object  |
+| `trim_to_audio`     | Boolean | End video when audio ends      |
+| `fade_in_enabled`   | Bool    | Prepend a color fade-in        |
+| `fade_in_color`     | String  | Hex color                      |
+| `fade_in_duration`  | Float   | Fade-in length                 |
+| `fade_out_enabled`  | Bool    | Append/force fade-out          |
+| `fade_out_color`    | String  | Hex color                      |
+| `fade_out_duration` | Float   | Fade-out length                |
+
+---
+
+## 📤 Output
+
+The node returns a **single string**:
+`output_path` → Full path to the generated video file.
+
+---
+
+## 🧩 How It Works Internally
+
+### 1. Load & Order Files
+
+Uses glob pattern matching and optional sorting/shuffling.
+
+### 2. Extract Video Metadata
+
+Parallel ffprobe calls retrieve durations and video stream info.
+
+### 3. Build FFmpeg Filtergraph
+
+Depending on settings:
+
+* Simple concatenation **OR**
+* Complex graph with:
+
+  * normalized FPS
+  * color clip generation
+  * chained `xfade` transitions
+  * final fade-out tied to audio
+  * overlaying custom audio
+
+### 4. Render via FFmpeg
+
+Quiet ffmpeg execution ensures efficient rendering.
+
+### 5. Cleanup
+
+Temporary files (WAV audio, concat lists) are deleted automatically.
+
+---
+
+## 📦 Installation (ComfyUI Custom Node)
+
+Place the script inside:
+
+```
+ComfyUI/custom_nodes/
+```
+
+Restart ComfyUI.
+The node will appear under:
+
+```
+Video → ComfyVideoCombiner
+```
+
+---
+
+## 📝 Notes
+
+* If audio trimming is enabled, the script ensures fade-outs occur **before** the audio ends.
+* Fades and transitions never exceed clip lengths; they are automatically clamped.
+* Color fade-ins and fade-outs use ffmpeg's `color` source generator.
+
+---
+
 # 🧪 **Troubleshooting**
 
 ### **“Clamped margin” warnings**
