@@ -48,6 +48,15 @@ class ComfyVideoCombiner:
                     "multiline": False,
                     "placeholder": "*.mp4"
                 }),
+                "clip_duration": ("FLOAT", {
+                    "default": 5.0,
+                    "min": 0.0,
+                    "max": 3600.0,
+                    "step": 0.1,
+                    "round": 0.1,
+                    "label": "Random segment length (s, 0=full video)"
+                }),
+
                 "transition": (["none", "fade"], {"default": "fade"}),
                 "transition_duration": ("FLOAT", {
                     "default": 0.5,
@@ -141,16 +150,6 @@ class ComfyVideoCombiner:
                     "step": 0.1,
                     "round": 0.1,
                     "label": "Fade out duration (s)"
-                }),
-
-                # NEW: random segment duration per clip
-                "clip_duration": ("FLOAT", {
-                    "default": 5.0,
-                    "min": 0.0,
-                    "max": 3600.0,
-                    "step": 0.1,
-                    "round": 0.1,
-                    "label": "Random segment length (s, 0=full video)"
                 }),
             }
         }
@@ -426,55 +425,63 @@ class ComfyVideoCombiner:
         - If clip_duration <= 0: use full video.
         - If 0 < clip_duration <= original_duration: pick a random segment of that length.
         - If clip_duration > original_duration: loop the full video until reaching clip_duration.
+
         Returns (stream, effective_duration).
         """
-        # Base stream with normalized FPS
-        base_stream = ffmpeg.input(video_path).filter('fps', fps=base_fps)
+        if original_duration <= 0:
+            raise RuntimeError(
+                f"Invalid duration ({original_duration}) for video '{video_path}'"
+            )
 
+        pad_color = self._sanitize_hex_color(pad_color)
+
+        # Helper: build one trimmed segment from the file
+        def make_segment(start: float, end: float):
+            s = ffmpeg.input(video_path)
+            s = s.filter("trim", start=start, end=end)
+            s = s.filter("setpts", "PTS-STARTPTS")
+            return s
+
+        # 1) Use full video
         if clip_duration <= 0:
-            # Full clip
-            seg_stream = base_stream
+            seg_stream = ffmpeg.input(video_path)
             effective_duration = original_duration
+
+        # 2) Single random sub-segment
+        elif clip_duration <= original_duration:
+            max_start = max(0.0, original_duration - clip_duration)
+            start = random.uniform(0.0, max_start) if max_start > 0 else 0.0
+            end = start + clip_duration
+            seg_stream = make_segment(start, end)
+            effective_duration = clip_duration
+
+        # 3) Loop video to fill clip_duration
         else:
-            if original_duration <= 0:
-                raise RuntimeError(f"Invalid duration ({original_duration}) for video '{video_path}'")
+            full_copies = int(clip_duration // original_duration)
+            remainder = clip_duration - full_copies * original_duration
 
-            if clip_duration <= original_duration:
-                # Random sub-segment
-                max_start = max(0.0, original_duration - clip_duration)
-                start = random.uniform(0.0, max_start) if max_start > 0 else 0.0
-                end = start + clip_duration
-                seg_stream = base_stream.filter('trim', start=start, end=end)
-                seg_stream = seg_stream.filter('setpts', 'PTS-STARTPTS')
-                effective_duration = clip_duration
+            segments = []
+            copies = max(1, full_copies)
+
+            # Full-length copies
+            for _ in range(copies):
+                segments.append(make_segment(0.0, original_duration))
+
+            # Remainder segment, if needed
+            if remainder > 0.01:
+                segments.append(make_segment(0.0, remainder))
+
+            if len(segments) == 1:
+                seg_stream = segments[0]
             else:
-                # Loop the clip until we reach clip_duration
-                full_copies = int(clip_duration // original_duration)
-                remainder = clip_duration - full_copies * original_duration
+                # concat v-only; fps will be enforced AFTER concat
+                seg_stream = ffmpeg.concat(*segments, v=1, a=0)
 
-                segments = []
-                copies = max(1, full_copies)
-                for _ in range(copies):
-                    s_full = base_stream.filter('trim', start=0, end=original_duration)
-                    s_full = s_full.filter('setpts', 'PTS-STARTPTS')
-                    segments.append(s_full)
+            effective_duration = clip_duration
 
-                if remainder > 0.01:
-                    s_rem = base_stream.filter('trim', start=0, end=remainder)
-                    s_rem = s_rem.filter('setpts', 'PTS-STARTPTS')
-                    segments.append(s_rem)
-
-                if len(segments) == 1:
-                    seg_stream = segments[0]
-                else:
-                    # concat sometimes produces an output with undefined fps (1/0),
-                    # which breaks xfade. We'll enforce fps again afterwards.
-                    seg_stream = ffmpeg.concat(*segments, v=1, a=0)
-
-                effective_duration = clip_duration
-
-        # 🔧 IMPORTANT: re-normalize FPS AFTER concat/trim so xfade always sees a valid frame rate
-        seg_stream = seg_stream.filter('fps', fps=base_fps)
+        # Normalize FPS once here so downstream filters (xfade, etc.) always
+        # see a valid frame rate, with no branching off a shared fps node.
+        seg_stream = seg_stream.filter("fps", fps=base_fps)
 
         # Apply resize (crop or padding) preserving aspect ratio
         seg_stream = self._apply_resize_filters(
@@ -486,8 +493,6 @@ class ComfyVideoCombiner:
         )
 
         return seg_stream, effective_duration
-
-
 
     def combine_videos(
         self,
@@ -524,6 +529,9 @@ class ComfyVideoCombiner:
         - clip_duration: if > 0, use a random segment of this length (seconds) from each clip.
                          If the requested duration is longer than the clip, loop the clip
                          until that duration is reached. If 0, use full video as before.
+        - If an audio track is present and its duration is longer than
+          (number_of_files × seconds_per_file), the node will keep randomly
+          adding segments until the total video duration reaches the audio duration.
         """
 
         directory = Path(directory_path).expanduser().resolve()
@@ -626,6 +634,7 @@ class ComfyVideoCombiner:
                 # Advanced path: transitions / fades / random segments
                 original_durations = self._compute_durations_parallel(video_files)
 
+                # "Nominal" per-clip duration (used for clamping transitions)
                 if clip_duration > 0:
                     per_clip_duration = clip_duration
                 else:
@@ -646,6 +655,63 @@ class ComfyVideoCombiner:
                     f"for all clips/color fades."
                 )
 
+                # --- Build a playlist that may extend to cover full audio duration ---
+                # Start with each file once
+                playlist = list(zip(video_files, original_durations))
+
+                if audio_path and trim_to_audio and audio_duration is not None:
+                    # Base total duration of one pass through all files (no overlaps)
+                    if clip_duration > 0:
+                        base_total = len(video_files) * clip_duration
+                        nominal_clip_len = clip_duration
+                    else:
+                        base_total = sum(original_durations)
+                        nominal_clip_len = base_total / max(1, len(original_durations))
+
+                    target = audio_duration
+
+                    # Estimate how much we lose per transition due to xfade
+                    if transition == "fade" and len(video_files) >= 2:
+                        nominal_xfade = transition_duration
+                    else:
+                        # the "no transition" path still uses a tiny xfade (~0.05s)
+                        nominal_xfade = min(0.05, nominal_clip_len)
+
+                    def estimate_effective(raw, n_clips):
+                        n_xfades = max(0, n_clips - 1)
+                        return raw - n_xfades * nominal_xfade
+
+                    cum_raw = base_total
+                    clips_count = len(playlist)
+                    cum_effective = estimate_effective(cum_raw, clips_count)
+
+                    if cum_effective < target:
+                        print(
+                            f"Audio is longer ({audio_duration:.3f}s) than base video duration "
+                            f"({cum_effective:.3f}s after crossfades). Extending with random clips..."
+                        )
+
+                        # Keep adding random clips until the *effective* duration
+                        # (after estimated overlaps) reaches the audio length
+                        while cum_effective < target:
+                            idx = random.randrange(len(video_files))
+                            vf = video_files[idx]
+                            dur = original_durations[idx]
+                            playlist.append((vf, dur))
+                            clips_count += 1
+
+                            if clip_duration > 0:
+                                cum_raw += clip_duration
+                            else:
+                                cum_raw += dur
+
+                            cum_effective = estimate_effective(cum_raw, clips_count)
+
+                        print(
+                            f"Extended playlist to approx {cum_effective:.3f}s "
+                            f"(raw {cum_raw:.3f}s) to cover audio duration ({audio_duration:.3f}s)."
+                        )
+
                 all_streams = []
                 all_durations = []
 
@@ -658,7 +724,7 @@ class ComfyVideoCombiner:
                     all_durations.append(float(fade_in_duration))
 
                 # Build per-clip segment streams (random/looped) and durations
-                for vf, orig_dur in zip(video_files, original_durations):
+                for vf, orig_dur in playlist:
                     seg_stream, eff_dur = self._build_segment_stream(
                         str(vf),
                         base_fps,
@@ -672,6 +738,7 @@ class ComfyVideoCombiner:
                     all_streams.append(seg_stream)
                     all_durations.append(float(eff_dur))
 
+                # Only add a final color clip if we're NOT trimming to audio
                 append_fadeout_clip = fade_out_enabled and not (audio_path and trim_to_audio)
 
                 if append_fadeout_clip:
@@ -682,6 +749,7 @@ class ComfyVideoCombiner:
                     all_streams.append(color_out)
                     all_durations.append(float(fade_out_duration))
 
+                # Chain with xfade
                 if len(all_streams) == 1:
                     current = all_streams[0]
                 else:
@@ -702,7 +770,7 @@ class ComfyVideoCombiner:
                             desired = fade_out_duration
 
                         else:
-                            if transition == "fade" and len(video_files) >= 2:
+                            if transition == "fade" and len(playlist) >= 2:
                                 xfade_transition = "fade"
                                 desired = transition_duration
                             else:
@@ -735,6 +803,7 @@ class ComfyVideoCombiner:
 
                         offset_accum += prev_dur - actual
 
+                # If we have audio and are trimming to its length, optionally fade video out
                 if fade_out_enabled and audio_path and trim_to_audio and audio_duration:
                     effective_fade = min(
                         fade_out_duration,
