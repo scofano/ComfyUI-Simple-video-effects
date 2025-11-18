@@ -178,7 +178,7 @@ Here’s a clean **Markdown README description** for the script, based on the up
 
 ---
 
-# 🎥 **6. Comfy Video Combiner
+# 🎥 **6. Comfy Video Combiner**
 
 This script provides a **ComfyUI-compatible node** for automatically combining multiple video files from a directory into a single edited output.
 It offers robust handling of transitions, fades, audio overlays, randomization, and resolution normalization—all wrapped in an easy-to-use, configurable ComfyUI node.
