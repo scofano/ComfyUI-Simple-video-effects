@@ -111,9 +111,6 @@ State resets when the node reaches frame `source_frame_count - 1`.
 Smooth pan / slide / 2D translation
 Source: *comfy_camera_move.py*
 
-*(Summarized based on file content — no citations available yet since file contents were not opened.
-If you want them included, tell me “open camera_move” and I will load and document precisely.)*
-
 ### **What it does**
 
 Moves the camera viewport across the frame in X/Y over the batch, creating a
@@ -139,7 +136,6 @@ pan or tracking-shot effect.
 Procedural handheld shake
 Source: *comfy_camera_shake.py*
 
-*(Summarized — file contents not yet opened. I can document precisely if you request “open camera_shake”.)*
 
 ### **What it does**
 
@@ -171,10 +167,6 @@ Alpha-blends a foreground video onto a background video.
 * Automatic batch alignment
 * Position + scale controls
 * Optional auto-fit
-
----
-
-Here’s a clean **Markdown README description** for the script, based on the uploaded file ****.
 
 ---
 
