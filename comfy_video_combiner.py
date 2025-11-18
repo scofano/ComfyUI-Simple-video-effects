@@ -48,13 +48,38 @@ class ComfyVideoCombiner:
                     "multiline": False,
                     "placeholder": "*.mp4"
                 }),
-                "transition": (["none", "fade"], {"default": "none"}),
+                "transition": (["none", "fade"], {"default": "fade"}),
                 "transition_duration": ("FLOAT", {
                     "default": 0.5,
                     "min": 0.1,
                     "max": 2.0,
                     "step": 0.1,
                     "round": 0.1,
+                }),
+                # NEW: target resolution + resize mode
+                "width": ("INT", {
+                    "default": 1080,
+                    "min": 1,
+                    "max": 8192,
+                    "step": 1,
+                    "label": "Target width"
+                }),
+                "height": ("INT", {
+                    "default": 1920,
+                    "min": 1,
+                    "max": 8192,
+                    "step": 1,
+                    "label": "Target height"
+                }),
+                "resize_mode": (["crop", "padding"], {
+                    "default": "crop",
+                    "label": "Resize mode"
+                }),
+                "resize_padding_color": ("STRING", {
+                    "default": "#000000",
+                    "multiline": False,
+                    "placeholder": "#000000",
+                    "label": "Padding background color (hex)"
                 }),
             },
             "optional": {
@@ -117,6 +142,16 @@ class ComfyVideoCombiner:
                     "round": 0.1,
                     "label": "Fade out duration (s)"
                 }),
+
+                # NEW: random segment duration per clip
+                "clip_duration": ("FLOAT", {
+                    "default": 5.0,
+                    "min": 0.0,
+                    "max": 3600.0,
+                    "step": 0.1,
+                    "round": 0.1,
+                    "label": "Random segment length (s, 0=full video)"
+                }),
             }
         }
 
@@ -147,16 +182,15 @@ class ComfyVideoCombiner:
             comfy_root = None
             for parent in current_path.parents:
                 if parent.name == "ComfyUI":
-                    comfy_root = parent.parent # Go up one more to the root *containing* ComfyUI
+                    comfy_root = parent.parent  # Go up one more to the root *containing* ComfyUI
                     break
             
             if comfy_root:
-                 # Standard ComfyUI output is 'ComfyUI/output'
-                 fallback_dir = comfy_root / "ComfyUI" / "output"
+                # Standard ComfyUI output is 'ComfyUI/output'
+                fallback_dir = comfy_root / "ComfyUI" / "output"
             else:
-                 # Fallback to current working directory if root can't be inferred
-                 fallback_dir = Path(os.getcwd()) / "output"
-
+                # Fallback to current working directory if root can't be inferred
+                fallback_dir = Path(os.getcwd()) / "output"
 
             os.makedirs(fallback_dir, exist_ok=True)
             return str(fallback_dir)
@@ -171,7 +205,6 @@ class ComfyVideoCombiner:
         Get duration of video file using ffmpeg, with robust error handling.
         """
         try:
-            # no stderr= here – let ffmpeg-python handle the subprocess
             probe = ffmpeg.probe(video_path)
         except ffmpeg.Error as e:
             msg = e.stderr.decode() if getattr(e, "stderr", None) else str(e)
@@ -188,7 +221,7 @@ class ComfyVideoCombiner:
         except Exception as e:
             raise RuntimeError(f"Invalid duration value for video '{video_path}': {fmt['duration']} ({e})")
 
-    def _get_video_resolution_and_fps(self, video_path: str) -> tuple[int, int, float]:
+    def _get_video_resolution_and_fps(self, video_path: str):
         """
         Get (width, height, fps_float) of the first video stream.
         """
@@ -250,7 +283,6 @@ class ComfyVideoCombiner:
                 f.result()
 
         if exceptions:
-            # Report the first error (or aggregate if desired)
             path, e = exceptions[0]
             raise RuntimeError(f"Error computing duration of '{path}': {e}")
 
@@ -259,9 +291,6 @@ class ComfyVideoCombiner:
     def _process_vhs_audio(self, audio_dict):
         """
         Process VideoHelperSuite-style audio input.
-
-        This function converts the audio tensor to a usable temporary WAV file,
-        handling the 3D shape common in VFS/ComfyUI audio output.
         """
 
         if not isinstance(audio_dict, dict):
@@ -269,44 +298,34 @@ class ComfyVideoCombiner:
 
         path = audio_dict.get("path") or audio_dict.get("output_path")
         if path and os.path.exists(path):
-            # Just use the existing audio file.
             return path, None
 
-        # If no ready-made path is given, fall back to waveform-based writing if present.
         waveform = audio_dict.get("waveform")
         sample_rate = audio_dict.get("sample_rate")
 
         if waveform is None or sample_rate is None:
             raise ValueError("VideoHelperSuite audio must include either 'path' or ('waveform' and 'sample_rate').")
 
-        # 1. Convert to NumPy array
         if not isinstance(waveform, np.ndarray):
             try:
-                # Attempt to convert PyTorch/TensorFlow tensor to numpy
                 waveform = waveform.cpu().numpy() if hasattr(waveform, 'cpu') else np.array(waveform)
             except Exception as e:
                 print(f"Warning: Could not convert waveform to numpy for processing. Error: {e}")
 
-        # 2. Reshape/Squeeze: Remove any leading 'batch' dimension of size 1 (e.g., (1, 2, N) -> (2, N)).
         if hasattr(waveform, 'ndim') and waveform.ndim > 2:
             original_shape = waveform.shape
             if hasattr(waveform, 'squeeze'):
-                 waveform = waveform.squeeze()
+                waveform = waveform.squeeze()
             elif original_shape[0] == 1:
-                 # Fallback for manual removal of batch dim
-                 waveform = waveform.reshape(original_shape[1:])
+                waveform = waveform.reshape(original_shape[1:])
             print(f"Squeezed 3D waveform from {original_shape} to {waveform.shape}")
 
-        # 3. Transpose: Convert from (channels, samples) to (samples, channels) 
-        # as expected by soundfile for stereo audio.
         if waveform.ndim == 2 and waveform.shape[0] < waveform.shape[1]:
-             waveform = waveform.T
-             print(f"Transposed 2D waveform to shape: {waveform.shape} (samples, channels)")
+            waveform = waveform.T
+            print(f"Transposed 2D waveform to shape: {waveform.shape} (samples, channels)")
         
-        # Ensure sample rate is an integer for soundfile
         sample_rate = int(sample_rate)
 
-        # Write to temporary WAV file
         temp_audio = tempfile.NamedTemporaryFile(suffix='.wav', delete=False)
         temp_audio.close()
 
@@ -337,15 +356,138 @@ class ComfyVideoCombiner:
         if not color:
             return "#000000"
         
-        # Ensure it contains only valid hex characters and doesn't exceed 6 digits
         color = ''.join(c for c in color if c.lower() in '0123456789abcdef')
         if len(color) > 6:
             color = color[:6]
         
-        # Pad with leading zeros to ensure 6 characters (e.g., '1' -> '000001')
         color = color.zfill(6)
         
         return "#" + color
+
+    def _apply_resize_filters(self, video_stream, target_width: int, target_height: int,
+                              resize_mode: str, pad_color: str):
+        """
+        Resize a video stream to target_width x target_height while preserving aspect ratio.
+        - crop: scale to cover, then center-crop.
+        - padding: scale to fit, then pad with pad_color.
+        """
+        if target_width <= 0 or target_height <= 0:
+            return video_stream
+
+        pad_color = self._sanitize_hex_color(pad_color)
+        if resize_mode not in ("crop", "padding"):
+            resize_mode = "crop"
+
+        if resize_mode == "crop":
+            video_stream = video_stream.filter(
+                "scale",
+                target_width,
+                target_height,
+                force_original_aspect_ratio="increase"
+            )
+            video_stream = video_stream.filter(
+                "crop",
+                str(target_width),
+                str(target_height),
+                "(in_w-out_w)/2",
+                "(in_h-out_h)/2"
+            )
+        else:
+            video_stream = video_stream.filter(
+                "scale",
+                target_width,
+                target_height,
+                force_original_aspect_ratio="decrease"
+            )
+            video_stream = video_stream.filter(
+                "pad",
+                str(target_width),
+                str(target_height),
+                "(ow-iw)/2",
+                "(oh-ih)/2",
+                color=pad_color
+            )
+
+        return video_stream
+
+    def _build_segment_stream(
+        self,
+        video_path: str,
+        base_fps: float,
+        target_width: int,
+        target_height: int,
+        resize_mode: str,
+        pad_color: str,
+        clip_duration: float,
+        original_duration: float,
+    ):
+        """
+        Build a video stream for a single clip:
+        - If clip_duration <= 0: use full video.
+        - If 0 < clip_duration <= original_duration: pick a random segment of that length.
+        - If clip_duration > original_duration: loop the full video until reaching clip_duration.
+        Returns (stream, effective_duration).
+        """
+        # Base stream with normalized FPS
+        base_stream = ffmpeg.input(video_path).filter('fps', fps=base_fps)
+
+        if clip_duration <= 0:
+            # Full clip
+            seg_stream = base_stream
+            effective_duration = original_duration
+        else:
+            if original_duration <= 0:
+                raise RuntimeError(f"Invalid duration ({original_duration}) for video '{video_path}'")
+
+            if clip_duration <= original_duration:
+                # Random sub-segment
+                max_start = max(0.0, original_duration - clip_duration)
+                start = random.uniform(0.0, max_start) if max_start > 0 else 0.0
+                end = start + clip_duration
+                seg_stream = base_stream.filter('trim', start=start, end=end)
+                seg_stream = seg_stream.filter('setpts', 'PTS-STARTPTS')
+                effective_duration = clip_duration
+            else:
+                # Loop the clip until we reach clip_duration
+                full_copies = int(clip_duration // original_duration)
+                remainder = clip_duration - full_copies * original_duration
+
+                segments = []
+                copies = max(1, full_copies)
+                for _ in range(copies):
+                    s_full = base_stream.filter('trim', start=0, end=original_duration)
+                    s_full = s_full.filter('setpts', 'PTS-STARTPTS')
+                    segments.append(s_full)
+
+                if remainder > 0.01:
+                    s_rem = base_stream.filter('trim', start=0, end=remainder)
+                    s_rem = s_rem.filter('setpts', 'PTS-STARTPTS')
+                    segments.append(s_rem)
+
+                if len(segments) == 1:
+                    seg_stream = segments[0]
+                else:
+                    # concat sometimes produces an output with undefined fps (1/0),
+                    # which breaks xfade. We'll enforce fps again afterwards.
+                    seg_stream = ffmpeg.concat(*segments, v=1, a=0)
+
+                effective_duration = clip_duration
+
+        # 🔧 IMPORTANT: re-normalize FPS AFTER concat/trim so xfade always sees a valid frame rate
+        seg_stream = seg_stream.filter('fps', fps=base_fps)
+
+        # Apply resize (crop or padding) preserving aspect ratio
+        seg_stream = self._apply_resize_filters(
+            seg_stream,
+            target_width,
+            target_height,
+            resize_mode,
+            pad_color,
+        )
+
+        return seg_stream, effective_duration
+
+
 
     def combine_videos(
         self,
@@ -354,6 +496,9 @@ class ComfyVideoCombiner:
         file_pattern: str,
         transition: str = "none",
         transition_duration: float = 0.5,
+        width: int = 1920,
+        height: int = 1080,
+        resize_mode: str = "crop",
         sort_files: bool = True,
         random_order: bool = True,
         seed: int = -1,
@@ -365,22 +510,30 @@ class ComfyVideoCombiner:
         fade_out_enabled: bool = False,
         fade_out_color: str = "#000000",
         fade_out_duration: float = 1.0,
+        resize_padding_color: str = "#000000",
+        clip_duration: float = 5.0,
     ) -> tuple:
         """
         Combine multiple video files from a directory into a single video file
         with optional transitions, fade in/out from/to color, and optional music.
+
+        NEW:
+        - width / height: target resolution of the output video.
+        - resize_mode: "crop" (center crop) or "padding" (letterbox/pillarbox with color).
+        - resize_padding_color: hex color used for padding when resize_mode="padding".
+        - clip_duration: if > 0, use a random segment of this length (seconds) from each clip.
+                         If the requested duration is longer than the clip, loop the clip
+                         until that duration is reached. If 0, use full video as before.
         """
 
         directory = Path(directory_path).expanduser().resolve()
         if not directory.is_dir():
             raise ValueError(f"Directory does not exist: {directory}")
 
-        # Gather matching video files
         video_files = sorted(directory.glob(file_pattern))
         if not video_files:
             raise ValueError(f"No video files found in directory '{directory}' matching pattern '{file_pattern}'")
 
-        # Optional randomization (no repeats)
         if random_order:
             if seed != -1:
                 random.seed(seed)
@@ -388,7 +541,6 @@ class ComfyVideoCombiner:
         elif sort_files:
             video_files.sort()
 
-        # Process VHS audio format
         audio_path = None
         temp_audio = None
         audio_duration = None
@@ -397,13 +549,11 @@ class ComfyVideoCombiner:
             audio_path, temp_audio = self._process_vhs_audio(music_track)
             if audio_path and trim_to_audio:
                 try:
-                    # Works for audio as well; just uses ffprobe format.duration
                     audio_duration = self._get_video_duration(audio_path)
                 except Exception as e:
                     print(f"Warning: could not probe audio duration: {e}")
                     audio_duration = None
 
-        # Set output path with uniqueness
         output_filename = output_filename.strip() or "combined_output.mp4"
         if not output_filename.lower().endswith(".mp4"):
             output_filename += ".mp4"
@@ -411,39 +561,56 @@ class ComfyVideoCombiner:
         output_path = os.path.join(self.output_dir, output_filename)
         output_path = self.get_unique_filename(output_path)
 
-        # Sanitize colors
         fade_in_color = self._sanitize_hex_color(fade_in_color)
         fade_out_color = self._sanitize_hex_color(fade_out_color)
+        resize_padding_color = self._sanitize_hex_color(resize_padding_color)
 
-        # Decide whether we need advanced filter-graph:
-        # - If transition == "fade" and we have at least 2 videos, OR
-        # - We have fade in/out enabled
+        first_w, first_h, base_fps = self._get_video_resolution_and_fps(str(video_files[0]))
+
+        if width <= 0 or height <= 0:
+            target_width, target_height = first_w, first_h
+        else:
+            target_width, target_height = width, height
+
+        print(
+            f"Using target resolution {target_width}x{target_height} at {base_fps:.3f} fps "
+            f"with resize mode '{resize_mode}'."
+        )
+
+        # Use advanced graph if transitions/fades OR we're using random clip durations
         need_filter_graph = (
             (transition == "fade" and len(video_files) >= 2) or
             fade_in_enabled or
-            fade_out_enabled
+            fade_out_enabled or
+            clip_duration > 0
         )
 
         try:
             if not need_filter_graph:
-                # Basic concatenation without transitions or fade in/out
+                # Simple path: full clips, no random trimming, no color fades
                 with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
                     for video_file in video_files:
-                        # Escape single quotes in path for ffmpeg concat file
                         path_str = str(video_file.absolute()).replace("'", r"'\''")
                         f.write(f"file '{path_str}'\n")
                     temp_list_path = f.name
 
                 stream = ffmpeg.input(temp_list_path, f='concat', safe=0)
 
+                stream = stream.filter('fps', fps=base_fps)
+                stream = self._apply_resize_filters(
+                    stream,
+                    target_width,
+                    target_height,
+                    resize_mode,
+                    resize_padding_color
+                )
+
                 if audio_path:
                     audio_stream = ffmpeg.input(audio_path)
                     output_args = {
                         'acodec': 'aac',
-                        'vcodec': 'copy',
                     }
                     if trim_to_audio:
-                        # -shortest → cut to the *shorter* of audio/video (usually the audio)
                         output_args['shortest'] = None
 
                     stream = ffmpeg.output(
@@ -453,108 +620,95 @@ class ComfyVideoCombiner:
                         **output_args,
                     )
                 else:
-                    stream = ffmpeg.output(stream, output_path, c='copy')
+                    stream = ffmpeg.output(stream, output_path)
 
             else:
-                # Build a filter-graph with optional crossfades and optional fade in/out color clips
-                # Step 1: compute durations for all real video files (parallel)
-                durations = self._compute_durations_parallel(video_files)
+                # Advanced path: transitions / fades / random segments
+                original_durations = self._compute_durations_parallel(video_files)
 
-                # Clamp/check transition_duration vs clip length for real videos
+                if clip_duration > 0:
+                    per_clip_duration = clip_duration
+                else:
+                    per_clip_duration = min(original_durations)
+
                 if transition == "fade" and len(video_files) >= 2:
-                    min_duration = min(durations)
-                    if transition_duration >= min_duration:
-                        # Clamp rather than outright fail
-                        clamped = max(0.1, min_duration - 0.1)
+                    if transition_duration >= per_clip_duration:
+                        clamped = max(0.1, per_clip_duration - 0.1)
                         print(
                             f"Requested transition_duration ({transition_duration:.3f}s) "
-                            f"is >= shortest clip ({min_duration:.3f}s). "
+                            f"is >= effective clip length ({per_clip_duration:.3f}s). "
                             f"Clamping to {clamped:.3f}s."
                         )
                         transition_duration = clamped
 
-                # Get base resolution AND base fps from first video
-                width, height, base_fps = self._get_video_resolution_and_fps(str(video_files[0]))
-                print(f"Using base resolution {width}x{height} at {base_fps:.3f} fps for all clips/color fades.")
+                print(
+                    f"Using target resolution {target_width}x{target_height} at {base_fps:.3f} fps "
+                    f"for all clips/color fades."
+                )
 
-                # Build list of all streams and durations (including optional color clips)
                 all_streams = []
                 all_durations = []
 
-                # Optional fade in color clip (normalized to base_fps)
                 if fade_in_enabled:
-                    # Sanitize is already called outside this block
                     color_in = ffmpeg.input(
-                        f"color=c={fade_in_color}:s={width}x{height}:r={base_fps}:d={fade_in_duration}",
+                        f"color=c={fade_in_color}:s={target_width}x{target_height}:r={base_fps}:d={fade_in_duration}",
                         f='lavfi'
                     )
                     all_streams.append(color_in)
                     all_durations.append(float(fade_in_duration))
 
-                # Real video streams, normalized to base_fps
-                for vf, dur in zip(video_files, durations):
-                    s = ffmpeg.input(str(vf)).filter('fps', fps=base_fps)
-                    all_streams.append(s)
-                    all_durations.append(float(dur))
+                # Build per-clip segment streams (random/looped) and durations
+                for vf, orig_dur in zip(video_files, original_durations):
+                    seg_stream, eff_dur = self._build_segment_stream(
+                        str(vf),
+                        base_fps,
+                        target_width,
+                        target_height,
+                        resize_mode,
+                        resize_padding_color,
+                        clip_duration,
+                        orig_dur,
+                    )
+                    all_streams.append(seg_stream)
+                    all_durations.append(float(eff_dur))
 
-                # For fade-out, we have two modes:
-                # - When NOT trimming to audio: append a color clip and crossfade into it.
-                # - When trimming to audio: we'll do a final fade based on the audio length,
-                #   so we do NOT append a separate color clip here.
                 append_fadeout_clip = fade_out_enabled and not (audio_path and trim_to_audio)
 
-                # Optional fade out color clip (normalized to base_fps)
                 if append_fadeout_clip:
-                    # Sanitize is already called outside this block
                     color_out = ffmpeg.input(
-                        f"color=c={fade_out_color}:s={width}x{height}:r={base_fps}:d={fade_out_duration}",
+                        f"color=c={fade_out_color}:s={target_width}x{target_height}:r={base_fps}:d={fade_out_duration}",
                         f='lavfi'
                     )
                     all_streams.append(color_out)
                     all_durations.append(float(fade_out_duration))
 
                 if len(all_streams) == 1:
-                    # Only one thing in the chain
                     current = all_streams[0]
                 else:
-                    # Chain xfade transitions between adjacent clips
                     current = all_streams[0]
                     offset_accum = 0.0
 
                     total_clips = len(all_streams)
-                    clip_indices = range(1, total_clips)
-                    iterator = clip_indices
-
-                    for i in iterator:
+                    for i in range(1, total_clips):
                         prev_dur = all_durations[i - 1]
                         cur_dur = all_durations[i]
 
-                        # -----------------------------
-                        # Choose transition type + duration
-                        # -----------------------------
                         if fade_in_enabled and i == 1:
-                            # Color -> first real video
                             xfade_transition = "fade"
                             desired = fade_in_duration
 
                         elif append_fadeout_clip and i == total_clips - 1:
-                            # Last real video -> fade into the color clip
                             xfade_transition = "fade"
                             desired = fade_out_duration
 
                         else:
-                            # Regular inter-video transitions
                             if transition == "fade" and len(video_files) >= 2:
                                 xfade_transition = "fade"
                                 desired = transition_duration
                             else:
-                                # For "none", approximate a cut with a tiny crossfade
                                 xfade_transition = "fade"
                                 desired = min(0.05, prev_dur, cur_dur)
 
-                        # -----------------------------
-                        # Clamp duration so it's valid
-                        # -----------------------------
                         max_allowed = max(0.0, min(prev_dur, cur_dur) - 0.01)
                         if max_allowed <= 0.0:
                             raise RuntimeError(
@@ -569,10 +723,8 @@ class ComfyVideoCombiner:
                                 f"for pair {i-1} -> {i}."
                             )
 
-                        # Compute offset for xfade
                         offset = offset_accum + prev_dur - actual
 
-                        # Apply xfade between current and the next clip
                         current = ffmpeg.filter(
                             [current, all_streams[i]],
                             'xfade',
@@ -583,11 +735,7 @@ class ComfyVideoCombiner:
 
                         offset_accum += prev_dur - actual
 
-                # If we're trimming to audio and fade-out is enabled,
-                # apply a final fade based on the audio length so it
-                # is guaranteed to happen before the render stops.
                 if fade_out_enabled and audio_path and trim_to_audio and audio_duration:
-                    # Clamp fade duration so it fits inside the audio
                     effective_fade = min(
                         fade_out_duration,
                         max(0.01, audio_duration - 0.01)
@@ -599,17 +747,16 @@ class ComfyVideoCombiner:
                         type='out',
                         start_time=fade_start,
                         duration=effective_fade,
-                        color=fade_out_color # This uses the already sanitized color!
+                        color=fade_out_color
                     )
 
-                # Setup output with audio if provided
                 if audio_path:
                     audio_stream = ffmpeg.input(audio_path)
                     output_args = {
                         'acodec': 'aac',
                     }
                     if trim_to_audio:
-                        output_args['shortest'] = None  # -shortest
+                        output_args['shortest'] = None
 
                     stream = ffmpeg.output(
                         current,
@@ -620,7 +767,6 @@ class ComfyVideoCombiner:
                 else:
                     stream = ffmpeg.output(current, output_path)
 
-            # Run the ffmpeg command
             stream = stream.overwrite_output()
             print("Rendering video...")
             stream.run(overwrite_output=True, quiet=True)
@@ -633,11 +779,9 @@ class ComfyVideoCombiner:
                 raise RuntimeError(f"FFmpeg error: {str(e)}")
 
         finally:
-            # Clean up temporary files
             if (not need_filter_graph) and 'temp_list_path' in locals():
                 if os.path.exists(temp_list_path):
                     os.unlink(temp_list_path)
-            # temp_audio cleanup needs to be robust as the object might not exist
             if 'temp_audio' in locals() and temp_audio is not None:
                 try:
                     temp_audio.close()
@@ -646,5 +790,4 @@ class ComfyVideoCombiner:
                 except Exception as e:
                     print(f"Warning: Failed to cleanup temp audio file: {e}")
 
-        # Return the output path as a tuple (required for ComfyUI nodes returning one value)
         return (output_path,)
