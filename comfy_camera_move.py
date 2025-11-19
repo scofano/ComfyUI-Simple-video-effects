@@ -85,7 +85,7 @@ class CameraMoveNode:
     RETURN_TYPES = ("IMAGE", "STRING",)
     RETURN_NAMES = ("images", "info",)
     FUNCTION = "run"
-    CATEGORY = "Utilities/Transforms"
+    CATEGORY = "Simple Video Effects"
 
     # Tell Comfy when to re-run this node instead of using cache
     @classmethod

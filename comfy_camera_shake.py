@@ -59,7 +59,7 @@ class CameraShakeNode:
     RETURN_TYPES = ("IMAGE", "STRING",)
     RETURN_NAMES = ("images", "info",)
     FUNCTION = "run"
-    CATEGORY = "Utilities/Transforms"
+    CATEGORY = "Simple Video Effects"
 
     # ---- helpers -------------------------------------------------------------
     def _resize_to(self, frame_hwc: torch.Tensor, size_hw):

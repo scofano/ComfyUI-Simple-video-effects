@@ -302,7 +302,7 @@ class VideoOverlay:
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "apply_overlay"
-    CATEGORY = "Video"
+    CATEGORY = "Simple Video Effects"
 
     def apply_overlay(self, images, overlay_video_path: str, opacity: float):
         if not overlay_video_path:

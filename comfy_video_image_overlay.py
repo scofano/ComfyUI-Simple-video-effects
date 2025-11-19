@@ -57,7 +57,7 @@ class VideoImageOverlay:
     FUNCTION = "apply_overlay"
 
     # Category in the node menu
-    CATEGORY = "video"
+    CATEGORY = "Simple Video Effects"
 
     # Mark as an OUTPUT node so it can run without needing any input
     OUTPUT_NODE = True

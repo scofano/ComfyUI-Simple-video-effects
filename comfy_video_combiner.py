@@ -158,7 +158,7 @@ class ComfyVideoCombiner:
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("output_path",)
     FUNCTION = "combine_videos"
-    CATEGORY = "Video"
+    CATEGORY = "Simple Video Effects"
     OUTPUT_NODE = True
 
     def __init__(self):
