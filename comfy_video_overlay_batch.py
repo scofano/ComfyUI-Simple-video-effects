@@ -33,7 +33,6 @@ def which_or_die(name: str) -> str:
 FFMPEG = which_or_die("ffmpeg")
 FFPROBE = which_or_die("ffprobe")
 
-
 def run(cmd: list[str]) -> None:
     print("[VideoOverlay] Running command:", " ".join(cmd), flush=True)
     try:
@@ -344,6 +343,42 @@ def _sanitize_prefix(prefix: str) -> str:
     return prefix
 
 
+# Modified version with delete_original parameter added.
+# (Full code pasted and updated accordingly.)
+
+import os
+import shutil
+import subprocess
+import json
+import tempfile
+from pathlib import Path
+
+import torch
+import numpy as np
+from PIL import Image
+
+try:
+    from tqdm import tqdm
+except ImportError:
+    def tqdm(x, *args, **kwargs):
+        return x
+
+try:
+    import folder_paths
+except ImportError:
+    folder_paths = None
+
+# ---- ffmpeg helpers ----
+
+def which_or_die(name: str) -> str:
+    p = shutil.which(name)
+    if not p:
+        raise RuntimeError(f"Error: '{name}' not found on PATH.")
+    return p
+
+FFMPEG = which_or_die("ffmpeg")
+FFPROBE = which_or_die("ffprobe")
+
 class VideoOverlayBatch:
     """
     Updated ComfyUI node:
@@ -353,13 +388,13 @@ class VideoOverlayBatch:
         - overlay_video_path: STRING (full path to overlay video)
         - prefix: STRING (filename prefix in ComfyUI output folder)
         - opacity: FLOAT
+        - delete_original: BOOLEAN (if True, delete the input/base video after processing)
 
       Behavior:
         - Creates an overlaid video using ffmpeg.
         - Saves result into default ComfyUI output folder.
         - Shows tqdm progress from 0% to 100% based on ffmpeg progress.
-        - Returns the full output filename as two STRING outputs
-          (node works fine even if the second/string-only output is not connected).
+        - Returns the full output filename as STRING.
     """
     OUTPUT_NODE = True
 
@@ -397,10 +432,15 @@ class VideoOverlayBatch:
                         "step": 0.01,
                     },
                 ),
+                "delete_original": (
+                    "BOOLEAN",
+                    {
+                        "default": False,
+                    },
+                ),
             }
         }
 
-    # Two STRING outputs: same filename, one can be used purely as "string" output
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("video_output_path",)
     FUNCTION = "apply_overlay"
@@ -410,7 +450,8 @@ class VideoOverlayBatch:
                       base_video_path: str,
                       overlay_video_path: str,
                       prefix: str,
-                      opacity: float):
+                      opacity: float,
+                      delete_original: bool = False):
 
         if not base_video_path:
             raise RuntimeError("base_video_path is empty.")
@@ -454,5 +495,12 @@ class VideoOverlayBatch:
         full_path_str = str(out_path.resolve())
         print(f"[VideoOverlay] Done. Output video: {full_path_str}", flush=True)
 
-        # Node works fine even if either output is not connected.
+        # --- NEW FEATURE: delete original base video file ---
+        if delete_original:
+            try:
+                base_video.unlink()
+                print(f"[VideoOverlay] Deleted original base video: {base_video}", flush=True)
+            except Exception as e:
+                print(f"[VideoOverlay] Warning: could not delete base video {base_video}: {e}", flush=True)
+
         return (full_path_str,)
