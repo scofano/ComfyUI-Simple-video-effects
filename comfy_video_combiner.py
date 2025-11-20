@@ -634,83 +634,75 @@ class ComfyVideoCombiner:
                 # Advanced path: transitions / fades / random segments
                 original_durations = self._compute_durations_parallel(video_files)
 
-                # "Nominal" per-clip duration (used for clamping transitions)
+                # "Nominal" per-clip duration
                 if clip_duration > 0:
-                    per_clip_duration = clip_duration
+                    nominal_clip_len = clip_duration
                 else:
-                    per_clip_duration = min(original_durations)
+                    nominal_clip_len = sum(original_durations) / max(1, len(original_durations))
 
+                # Helper for overlap estimate
                 if transition == "fade" and len(video_files) >= 2:
-                    if transition_duration >= per_clip_duration:
-                        clamped = max(0.1, per_clip_duration - 0.1)
-                        print(
-                            f"Requested transition_duration ({transition_duration:.3f}s) "
-                            f"is >= effective clip length ({per_clip_duration:.3f}s). "
-                            f"Clamping to {clamped:.3f}s."
-                        )
-                        transition_duration = clamped
+                    nominal_xfade = transition_duration
+                else:
+                    nominal_xfade = min(0.05, nominal_clip_len)
 
-                print(
-                    f"Using target resolution {target_width}x{target_height} at {base_fps:.3f} fps "
-                    f"for all clips/color fades."
-                )
+                def estimate_effective(raw, n_clips):
+                    n_xfades = max(0, n_clips - 1)
+                    return raw - n_xfades * nominal_xfade
 
-                # --- Build a playlist that may extend to cover full audio duration ---
-                # Start with each file once
-                playlist = list(zip(video_files, original_durations))
-
+                # --- Build a minimal playlist when trimming to audio ---
                 if audio_path and trim_to_audio and audio_duration is not None:
-                    # Base total duration of one pass through all files (no overlaps)
-                    if clip_duration > 0:
-                        base_total = len(video_files) * clip_duration
-                        nominal_clip_len = clip_duration
-                    else:
-                        base_total = sum(original_durations)
-                        nominal_clip_len = base_total / max(1, len(original_durations))
-
                     target = audio_duration
+                    playlist = []
+                    cum_raw = 0.0
+                    clips_count = 0
 
-                    # Estimate how much we lose per transition due to xfade
-                    if transition == "fade" and len(video_files) >= 2:
-                        nominal_xfade = transition_duration
-                    else:
-                        # the "no transition" path still uses a tiny xfade (~0.05s)
-                        nominal_xfade = min(0.05, nominal_clip_len)
+                    # Optional safety cap so it never goes insane
+                    MAX_CLIPS = 100  
 
-                    def estimate_effective(raw, n_clips):
-                        n_xfades = max(0, n_clips - 1)
-                        return raw - n_xfades * nominal_xfade
+                    while clips_count < MAX_CLIPS:
+                        idx = random.randrange(len(video_files))
+                        vf = video_files[idx]
+                        orig_dur = original_durations[idx]
 
-                    cum_raw = base_total
-                    clips_count = len(playlist)
-                    cum_effective = estimate_effective(cum_raw, clips_count)
+                        playlist.append((vf, orig_dur))
+                        clips_count += 1
 
-                    if cum_effective < target:
-                        print(
-                            f"Audio is longer ({audio_duration:.3f}s) than base video duration "
-                            f"({cum_effective:.3f}s after crossfades). Extending with random clips..."
-                        )
+                        clip_len = clip_duration if clip_duration > 0 else orig_dur
+                        cum_raw += clip_len
 
-                        # Keep adding random clips until the *effective* duration
-                        # (after estimated overlaps) reaches the audio length
-                        while cum_effective < target:
-                            idx = random.randrange(len(video_files))
-                            vf = video_files[idx]
-                            dur = original_durations[idx]
-                            playlist.append((vf, dur))
-                            clips_count += 1
+                        cum_effective = estimate_effective(cum_raw, clips_count)
+                        if cum_effective >= target:
+                            break
+                else:
+                    # No audio trimming: just use all files once
+                    playlist = list(zip(video_files, original_durations))
 
-                            if clip_duration > 0:
-                                cum_raw += clip_duration
-                            else:
-                                cum_raw += dur
+                    print(
+                        f"Audio is longer ({audio_duration:.3f}s) than base video duration "
+                        f"({cum_effective:.3f}s after crossfades). Extending with random clips..."
+                    )
 
-                            cum_effective = estimate_effective(cum_raw, clips_count)
+                    # Keep adding random clips until the *effective* duration
+                    # (after estimated overlaps) reaches the audio length
+                    while cum_effective < target:
+                        idx = random.randrange(len(video_files))
+                        vf = video_files[idx]
+                        dur = original_durations[idx]
+                        playlist.append((vf, dur))
+                        clips_count += 1
 
-                        print(
-                            f"Extended playlist to approx {cum_effective:.3f}s "
-                            f"(raw {cum_raw:.3f}s) to cover audio duration ({audio_duration:.3f}s)."
-                        )
+                        if clip_duration > 0:
+                            cum_raw += clip_duration
+                        else:
+                            cum_raw += dur
+
+                        cum_effective = estimate_effective(cum_raw, clips_count)
+
+                    print(
+                        f"Extended playlist to approx {cum_effective:.3f}s "
+                        f"(raw {cum_raw:.3f}s) to cover audio duration ({audio_duration:.3f}s)."
+                    )
 
                 all_streams = []
                 all_durations = []
