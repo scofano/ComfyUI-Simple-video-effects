@@ -2,8 +2,7 @@ import os
 import subprocess
 from typing import Tuple
 
-from tqdm import tqdm
-
+import comfy.utils
 import folder_paths
 
 
@@ -46,6 +45,12 @@ class VideoImageOverlay:
                         "placeholder": "Suffix for output video filename (before .mp4)",
                     },
                 ),
+                "delete_original": (
+                    "BOOLEAN",
+                    {
+                        "default": False,
+                    },
+                ),
             }
         }
 
@@ -77,6 +82,7 @@ class VideoImageOverlay:
         """Build the output .mp4 path in ComfyUI's output directory, avoiding overwrites."""
         output_dir = folder_paths.get_output_directory()
 
+        # Use the input path (normalized) for naming
         base_name = os.path.basename(video_path)
         stem, _ext = os.path.splitext(base_name)
 
@@ -110,8 +116,8 @@ class VideoImageOverlay:
         cmd = [
             "ffmpeg",
             "-y",
-            "-i", video_path,
-            "-i", overlay_image_path,
+            "-i", video_path,          # use the (normalized) input video path
+            "-i", overlay_image_path,  # overlay image
         ]
 
         # No resizing: direct overlay
@@ -119,28 +125,38 @@ class VideoImageOverlay:
 
         cmd.extend([
             "-filter_complex", filter_complex,
+
+            # Output the video stream
             "-map", "[vout]",
-            "-map", "0:a?",  # optional audio
+
+            # Optional audio (won't error if missing)
+            "-map", "0:a?",
+
+            # Encoding settings
             "-c:v", "libx264",
             "-pix_fmt", "yuv420p",
             "-c:a", "aac",
+
+            # Output file path
             output_path,
         ])
 
         return cmd
 
     def _run_ffmpeg_with_progress(self, cmd: list) -> None:
-        with tqdm(total=1, desc="Applying video overlay (ffmpeg)", unit="step") as pbar:
-            try:
-                result = subprocess.run(
-                    cmd,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
-                    check=False,
-                )
-            finally:
-                pbar.update(1)
+        # Use ComfyUI's ProgressBar instead of tqdm
+        pbar = comfy.utils.ProgressBar(1)
+        try:
+            result = subprocess.run(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                check=False,
+            )
+        finally:
+            # Ensure the bar completes even on error
+            pbar.update(1)
 
         if result.returncode != 0:
             err_snippet = (result.stderr or "").splitlines()[-10:]
@@ -157,7 +173,12 @@ class VideoImageOverlay:
         overlay_image_path: str,
         video_path: str,
         suffix: str,
+        delete_original: bool = False,
     ) -> Tuple[str]:
+
+        # Normalize paths once here so everything else uses the same real paths
+        overlay_image_path = os.path.abspath(overlay_image_path)
+        video_path = os.path.abspath(video_path)
 
         self._validate_paths(overlay_image_path, video_path)
 
@@ -177,5 +198,16 @@ class VideoImageOverlay:
             raise RuntimeError(
                 "ffmpeg executable not found. Make sure ffmpeg is installed and available in PATH."
             )
+
+        # If toggled on, delete the original video after processing
+        if delete_original:
+            try:
+                if os.path.exists(video_path):
+                    os.remove(video_path)
+                else:
+                    print(f"[VideoImageOverlay] Cannot delete original, not found: {video_path}")
+            except Exception as e:
+                # Avoid crashing the node just because deletion failed
+                print(f"[VideoImageOverlay] Failed to delete original: {e}")
 
         return (output_path,)
