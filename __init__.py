@@ -5,7 +5,7 @@ from .comfy_video_overlay import VideoOverlay
 from .comfy_camera_move import CameraMoveNode
 from .comfy_video_combiner import ComfyVideoCombiner
 from .comfy_video_image_overlay import VideoImageOverlay
-
+from .comfy_video_overlay_batch import VideoOverlayBatch
 
 NODE_CLASS_MAPPINGS = {
     "ZoomSequenceNode": ZoomSequenceNodeSingle,
@@ -15,6 +15,7 @@ NODE_CLASS_MAPPINGS = {
     "CameraMoveNode": CameraMoveNode,
     "AdvancedFolderVideoCombiner": ComfyVideoCombiner,
     "VideoImageOverlay": VideoImageOverlay,
+    "VideoOverlayBatch": VideoOverlayBatch,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -25,6 +26,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "CameraMoveNode": "Camera Move",
     "AdvancedFolderVideoCombiner": "Advanced Folder Video Combiner",
     "VideoImageOverlay": "Video Image Overlay",
+    "VideoOverlayBatch": "Video Overlay (Video Path)",
 }
 
 __all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS"]
