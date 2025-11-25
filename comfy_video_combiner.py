@@ -25,6 +25,7 @@ class ComfyVideoCombiner:
     - Optionally adds crossfade transitions between them
     - Optionally fades in from a color and/or fades out to a color
     - Optionally overlays a music track (VideoHelperSuite audio format)
+    - Optionally uses GPU-accelerated encoding (NVENC) when available
     """
 
     # Removed @classmethod OUTPUT_NODE(cls): return True
@@ -150,6 +151,11 @@ class ComfyVideoCombiner:
                     "step": 0.1,
                     "round": 0.1,
                     "label": "Fade out duration (s)"
+                }),
+                # GPU toggle
+                "use_gpu": ("BOOLEAN", {
+                    "default": True,
+                    "label": "Use GPU (NVENC encoder)"
                 }),
             }
         }
@@ -517,6 +523,7 @@ class ComfyVideoCombiner:
         fade_out_duration: float = 1.0,
         resize_padding_color: str = "#000000",
         clip_duration: float = 5.0,
+        use_gpu: bool = True,
     ) -> tuple:
         """
         Combine multiple video files from a directory into a single video file
@@ -532,6 +539,8 @@ class ComfyVideoCombiner:
         - If an audio track is present and its duration is longer than
           (number_of_files × seconds_per_file), the node will keep randomly
           adding segments until the total video duration reaches the audio duration.
+        - use_gpu: if True, attempt to use GPU-accelerated encoding (h264_nvenc).
+                   This requires an NVIDIA GPU with NVENC support and a compatible ffmpeg build.
         """
 
         directory = Path(directory_path).expanduser().resolve()
@@ -582,7 +591,7 @@ class ComfyVideoCombiner:
 
         print(
             f"Using target resolution {target_width}x{target_height} at {base_fps:.3f} fps "
-            f"with resize mode '{resize_mode}'."
+            f"with resize mode '{resize_mode}'. GPU: {'ON' if use_gpu else 'OFF'}"
         )
 
         # Use advanced graph if transitions/fades OR we're using random clip durations
@@ -620,6 +629,8 @@ class ComfyVideoCombiner:
                     }
                     if trim_to_audio:
                         output_args['shortest'] = None
+                    if use_gpu:
+                        output_args['vcodec'] = 'h264_nvenc'
 
                     stream = ffmpeg.output(
                         stream,
@@ -628,7 +639,10 @@ class ComfyVideoCombiner:
                         **output_args,
                     )
                 else:
-                    stream = ffmpeg.output(stream, output_path)
+                    if use_gpu:
+                        stream = ffmpeg.output(stream, output_path, vcodec='h264_nvenc')
+                    else:
+                        stream = ffmpeg.output(stream, output_path)
 
             else:
                 # Advanced path: transitions / fades / random segments
@@ -678,31 +692,41 @@ class ComfyVideoCombiner:
                     # No audio trimming: just use all files once
                     playlist = list(zip(video_files, original_durations))
 
-                    print(
-                        f"Audio is longer ({audio_duration:.3f}s) than base video duration "
-                        f"({cum_effective:.3f}s after crossfades). Extending with random clips..."
-                    )
-
-                    # Keep adding random clips until the *effective* duration
-                    # (after estimated overlaps) reaches the audio length
-                    while cum_effective < target:
-                        idx = random.randrange(len(video_files))
-                        vf = video_files[idx]
-                        dur = original_durations[idx]
-                        playlist.append((vf, dur))
-                        clips_count += 1
-
+                    # The following variables are used below when we may extend the playlist
+                    cum_raw = 0.0
+                    clips_count = 0
+                    for _, dur in playlist:
                         if clip_duration > 0:
                             cum_raw += clip_duration
                         else:
                             cum_raw += dur
+                        clips_count += 1
+                    cum_effective = estimate_effective(cum_raw, clips_count)
 
-                        cum_effective = estimate_effective(cum_raw, clips_count)
+                    if audio_path and audio_duration is not None and cum_effective < audio_duration:
+                        print(
+                            f"Audio is longer ({audio_duration:.3f}s) than base video duration "
+                            f"({cum_effective:.3f}s after crossfades). Extending with random clips..."
+                        )
+                        target = audio_duration
+                        while cum_effective < target and clips_count < 100:
+                            idx = random.randrange(len(video_files))
+                            vf = video_files[idx]
+                            dur = original_durations[idx]
+                            playlist.append((vf, dur))
+                            clips_count += 1
 
-                    print(
-                        f"Extended playlist to approx {cum_effective:.3f}s "
-                        f"(raw {cum_raw:.3f}s) to cover audio duration ({audio_duration:.3f}s)."
-                    )
+                            if clip_duration > 0:
+                                cum_raw += clip_duration
+                            else:
+                                cum_raw += dur
+
+                            cum_effective = estimate_effective(cum_raw, clips_count)
+
+                        print(
+                            f"Extended playlist to approx {cum_effective:.3f}s "
+                            f"(raw {cum_raw:.3f}s) to cover audio duration ({audio_duration:.3f}s)."
+                        )
 
                 all_streams = []
                 all_durations = []
@@ -818,6 +842,8 @@ class ComfyVideoCombiner:
                     }
                     if trim_to_audio:
                         output_args['shortest'] = None
+                    if use_gpu:
+                        output_args['vcodec'] = 'h264_nvenc'
 
                     stream = ffmpeg.output(
                         current,
@@ -826,7 +852,10 @@ class ComfyVideoCombiner:
                         **output_args,
                     )
                 else:
-                    stream = ffmpeg.output(current, output_path)
+                    if use_gpu:
+                        stream = ffmpeg.output(current, output_path, vcodec='h264_nvenc')
+                    else:
+                        stream = ffmpeg.output(current, output_path)
 
             stream = stream.overwrite_output()
             print("Rendering video...")
