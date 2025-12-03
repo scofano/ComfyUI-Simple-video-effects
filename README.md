@@ -10,6 +10,7 @@ This bundle includes:
 3. **Camera Move** – pan/slide across the frame
 4. **Camera Shake** – procedural handheld/chaotic motion
 5. **Video Overlay** – alpha-blend / composite one video over another
+6. **Image Transition** – create transition videos between two images
 
 ---
 
@@ -170,7 +171,47 @@ Alpha-blends a foreground video onto a background video.
 
 ---
 
-# 🎥 **6. Comfy Video Combiner**
+# 🎥 **6. ImageTransitionNode**
+
+Create smooth transition videos between two images
+Source: *comfy_image_transition.py*
+
+### **What it does**
+
+Generates an MP4 video that transitions from one image to another using a mask-based reveal effect, with optional line visualization.
+
+### **Key Features**
+
+* Horizontal or vertical reveal direction
+* Adjustable duration in seconds
+* Optional visible line at the reveal edge with customizable thickness and color
+* Automatic filename generation with prefix + "_001.mp4"
+* Saves to ComfyUI's default output directory
+
+### **Inputs**
+
+| Name         | Type          | Description                          |
+| ------------ | ------------- | ------------------------------------ |
+| `image1`     | IMAGE         | Bottom layer image                   |
+| `image2`     | IMAGE         | Top layer image (revealed)           |
+| `duration`   | FLOAT         | Transition duration in seconds       |
+| `direction`  | Select        | Reveal direction: Vertical-Down, Vertical-Up, Horizontal-Left, Horizontal-Right |
+| `line_toggle`| BOOLEAN       | Enable/disable visible line          |
+| `thickness`  | INT           | Line thickness in pixels             |
+| `hex_color`  | STRING        | Line color as hex (e.g., #FFFFFF)    |
+| `prefix`     | STRING        | Filename prefix                      |
+
+### **Outputs**
+
+* `output_path` – Full path to the generated MP4 file
+
+### **How it works**
+
+The node creates a frame-by-frame animation where image2 is gradually revealed over image1 using a dynamic mask. If enabled, a colored line marks the current reveal position. Frames are encoded into an MP4 video using ffmpeg at 24 FPS.
+
+---
+
+# 🎥 **7. Comfy Video Combiner**
 
 This script provides a **ComfyUI-compatible node** for automatically combining multiple video files from a directory into a single edited output.
 It offers robust handling of transitions, fades, audio overlays, randomization, and resolution normalization—all wrapped in an easy-to-use, configurable ComfyUI node.
