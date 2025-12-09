@@ -105,6 +105,7 @@ class VideoSplitterNode:
                 "ass_path": ("STRING", {"default": ""}),
                 "divider_chars": ("STRING", {"default": ".!?"}),
                 "folder_prefix": ("STRING", {"default": "split_video"}),
+                "min_audio_duration": ("INT", {"default": 5, "min": 1}),
             }
         }
 
@@ -114,7 +115,7 @@ class VideoSplitterNode:
     CATEGORY = "Simple Video Effects"
     OUTPUT_NODE = True
 
-    def split_video(self, video_path, ass_path, divider_chars, folder_prefix):
+    def split_video(self, video_path, ass_path, divider_chars, folder_prefix, min_audio_duration):
         if not os.path.exists(video_path):
             raise ValueError(f"Video file not found: {video_path}")
         if not os.path.exists(ass_path):
@@ -139,20 +140,28 @@ class VideoSplitterNode:
                 split_points.append(end_sec)
                 print(f"Split point found at {end_sec}s (Text: {text})")
 
-        # FIX: Deduplicate FIRST, then SORT. 
+        # FIX: Deduplicate FIRST, then SORT.
         # Previous code sorted then set(), which destroys order.
         split_points = sorted(list(set(split_points)))
 
+        # Filter split points based on min_audio_duration
+        effective_splits = []
+        current_start = 0.0
+        for sp in split_points:
+            if sp > current_start and sp - current_start >= min_audio_duration:
+                effective_splits.append(sp)
+                current_start = sp
+
         # Get video info
         duration = get_video_duration(video_path)
-        
+
         # Determine times [0, split1, split2, ..., duration]
-        times = [0.0] + split_points + [duration]
-        
+        times = [0.0] + effective_splits + [duration]
+
         # Sanitize list: ensure monotonic increase and unique
         times = sorted(list(set(times)))
-        
-        print(f"Cut points: {times}")
+
+        print(f"Effective cut points: {times}")
 
         # Create output folder
         output_dir = Path(OUTPUT_DIR)
