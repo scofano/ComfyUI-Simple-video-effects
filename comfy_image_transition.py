@@ -59,7 +59,7 @@ class ImageTransitionNode:
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("output_path",)
     FUNCTION = "create_transition"
-    CATEGORY = "Simple Video Effects"
+    CATEGORY = "Simple Video Effects/Image Processing"
     OUTPUT_NODE = True
     # OUTPUT_IS_LIST = False
     # OUTPUT_NODE = False

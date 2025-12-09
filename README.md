@@ -12,6 +12,10 @@ This bundle includes:
 5. **Video Overlay** – alpha-blend / composite one video over another
 6. **Image Transition** – create transition videos between two images
 7. **Video Splitter (ASS Subtitles)** – split videos based on subtitle punctuation
+8. **Camera Move (Video File)** – apply camera movement to video files with audio preservation
+9. **Camera Shake (Video File)** – apply camera shake effects to video files with audio preservation
+10. **Zoom Sequence (Video File)** – apply zoom effects to video files with audio preservation
+11. **Close Up (Face Centered)** – face-centered zoom using eye detection from SEGS
 
 ---
 
@@ -401,6 +405,276 @@ Automatically splits a video into segments based on punctuation marks (., !, ?) 
 * Ignores sequences like ".." or "..." as invalid dividers
 * Cleans ASS formatting tags from subtitle text
 * Ensures no segments are shorter than the minimum duration by combining when necessary
+
+---
+
+# 🎥 **9. Camera Move (Video File)**
+
+Apply camera movement effects to video files with audio preservation
+Source: *comfy_camera_move_video.py*
+
+### **What it does**
+
+Takes a video file path and applies the same camera movement effects as the image-based Camera Move node, then outputs a new video file with the original audio intact (if present).
+
+### **Key Features**
+
+* All camera movement options from the image version (pan, slide, diagonal)
+* Extracts frames from input video at original FPS
+* Applies movement effects using the same algorithm
+* Re-encodes frames back to video while preserving audio stream
+* Automatic output filename generation with incrementing numbers
+* Supports random direction selection with proper cache invalidation
+
+### **Inputs**
+
+| Name                  | Type   | Description                                      |
+| --------------------- | ------ | ------------------------------------------------ |
+| `video_path`          | STRING | Full path to the input video file                |
+| `horizontal_direction`| Select | None, Left, Right, Random                        |
+| `vertical_direction`  | Select | None, Top, Bottom, Random                        |
+| `distance_px`         | FLOAT  | Camera travel distance in pixels (default: 100.0)|
+| `ease`                | Select | Linear, Ease_In, Ease_Out, Ease_In_Out           |
+| `prefix`              | STRING | Output filename prefix (default: "camera_move")  |
+
+### **Outputs**
+
+* `output_path` – Full path to the processed video file
+
+### **How it works**
+
+1. Extracts video metadata (duration, FPS, resolution) using ffprobe
+2. Extracts all frames from the video using ffmpeg
+3. Applies camera movement transformations to the frame sequence
+4. Saves processed frames as temporary PNG files
+5. Re-encodes frames to video at original FPS with H.264 codec
+6. Copies original audio stream (if present) into the final video
+7. Cleans up temporary frame files automatically
+
+### **Movement Directions**
+
+Supports the same movement options as the image Camera Move node:
+
+- **Horizontal**: Left (right-to-left pan), Right (left-to-right pan)
+- **Vertical**: Top (bottom-to-top pan), Bottom (top-to-bottom pan)
+- **Combined**: Diagonal movement by selecting both horizontal and vertical directions
+- **Random**: Randomly chooses direction each execution
+
+### **Audio Handling**
+
+* Automatically detects and preserves audio streams from the original video
+* Uses ffmpeg stream copying for lossless audio preservation
+* Works with any audio codec supported by the input video
+
+---
+
+# 🎥 **10. Camera Shake (Video File)**
+
+Apply camera shake effects to video files with audio preservation
+Source: *comfy_camera_shake_video.py*
+
+### **What it does**
+
+Takes a video file path and applies procedural camera shake effects (circular or random patterns), then outputs a new video file with the original audio intact (if present).
+
+### **Key Features**
+
+* All camera shake options from the image version (circular/random modes, intensity, easing)
+* Extracts frames from input video at original FPS
+* Applies shake effects using the same algorithm with safe cropping
+* Re-encodes frames back to video while preserving audio stream
+* Automatic output filename generation with incrementing numbers
+* Supports configurable shake radius and easing envelopes
+
+### **Inputs**
+
+| Name              | Type   | Description                                        |
+| ----------------- | ------ | -------------------------------------------------- |
+| `video_path`      | STRING | Full path to the input video file                  |
+| `mode`            | Select | Circular Shake, Random Shake                       |
+| `pixels_per_frame`| FLOAT  | Shake radius on smaller dimension (default: 5.0)   |
+| `ease`            | Select | Linear, Ease_In, Ease_Out, Ease_In_Out             |
+| `prefix`          | STRING | Output filename prefix (default: "camera_shake")   |
+
+### **Outputs**
+
+* `output_path` – Full path to the processed video file
+
+### **How it works**
+
+1. Extracts video metadata (duration, FPS, resolution) using ffprobe
+2. Extracts all frames from the video using ffmpeg
+3. Applies camera shake transformations using aspect-corrected cropping
+4. Saves processed frames as temporary PNG files
+5. Re-encodes frames to video at original FPS with H.264 codec
+6. Copies original audio stream (if present) into the final video
+7. Cleans up temporary frame files automatically
+
+### **Shake Modes**
+
+Supports the same shake patterns as the image Camera Shake node:
+
+- **Circular Shake**: Smooth sinusoidal circular motion with configurable cycles
+- **Random Shake**: Constant-magnitude random directional steps (±1 pixel steps)
+
+### **Shake Control**
+
+- **Radius**: Controls maximum shake displacement based on smaller canvas dimension
+- **Easing**: Applies envelope over time (0..1) to modulate shake intensity
+- **Safe Cropping**: Uses aspect-corrected margins to prevent black borders during shake
+
+### **Audio Handling**
+
+* Automatically detects and preserves audio streams from the original video
+* Uses ffmpeg stream copying for lossless audio preservation
+* Works with any audio codec supported by the input video
+
+---
+
+# 🎥 **11. Zoom Sequence (Video File)**
+
+Apply zoom effects to video files with audio preservation
+Source: *comfy_zoom_sequence_video.py*
+
+### **What it does**
+
+Takes a video file path and applies smooth zoom in/out effects with aspect correction, then outputs a new video file with the original audio intact (if present).
+
+### **Key Features**
+
+* All zoom options from the image version (zoom in/out, easing, speed control)
+* Extracts frames from input video at original FPS
+* Applies zoom effects using aspect-corrected cropping
+* Re-encodes frames back to video while preserving audio stream
+* Automatic output filename generation with incrementing numbers
+* Supports configurable zoom speed and easing functions
+
+### **Inputs**
+
+| Name              | Type   | Description                                        |
+| ----------------- | ------ | -------------------------------------------------- |
+| `video_path`      | STRING | Full path to the input video file                  |
+| `mode`            | Select | Zoom In, Zoom Out                                  |
+| `pixels_per_frame`| FLOAT  | Zoom speed per frame (default: 1.0)                |
+| `ease`            | Select | Linear, Ease_In, Ease_Out, Ease_In_Out             |
+| `prefix`          | STRING | Output filename prefix (default: "zoom_sequence")  |
+
+### **Outputs**
+
+* `output_path` – Full path to the processed video file
+
+### **How it works**
+
+1. Extracts video metadata (duration, FPS, resolution) using ffprobe
+2. Extracts all frames from the video using ffmpeg
+3. Applies zoom transformations using aspect-corrected cropping
+4. Saves processed frames as temporary PNG files
+5. Re-encodes frames to video at original FPS with H.264 codec
+6. Copies original audio stream (if present) into the final video
+7. Cleans up temporary frame files automatically
+
+### **Zoom Modes**
+
+- **Zoom In**: Progressively zooms in from the original view to a cropped detail
+- **Zoom Out**: Progressively zooms out from a cropped detail to the full view
+
+### **Zoom Control**
+
+- **Speed**: Controls zoom progression rate per frame
+- **Easing**: Applies smooth acceleration/deceleration to zoom movement
+- **Aspect Correction**: Maintains proper aspect ratio during zoom transitions
+- **Safe Limits**: Prevents over-zooming beyond canvas boundaries
+
+### **Audio Handling**
+
+* Automatically detects and preserves audio streams from the original video
+* Uses ffmpeg stream copying for lossless audio preservation
+* Works with any audio codec supported by the input video
+
+---
+
+# 🎥 **12. Close Up (Face Centered)**
+
+Face-centered zoom using eye detection from SEGS data
+Source: *comfy_close_up.py*
+
+### **What it does**
+
+Takes a video file and SEGS segmentation data to detect eyes, calculates the center point between them (face center), and applies a zoom effect centered on that point. Outputs a new video with preserved audio.
+
+### **Key Features**
+
+* Processes SEGS data to find eye detections with confidence > 0.4
+* Calculates face center as midpoint between detected eye positions
+* Applies zoom factor centered on the calculated face center
+* Maintains aspect ratio and prevents over-zooming
+* Preserves original audio streams
+* Automatic output filename generation with incrementing numbers
+
+### **Requirements**
+
+**This node requires a specific workflow setup to generate the SEGS data for eye detection:**
+
+1. **Download the eye segmentation model**: Download `PitEyeDetailer-v2-seg.pt` from the Ultralytics models or compatible sources
+2. **Use the provided workflow**: The node requires SEGS data generated from video frames using segmentation detection
+
+**Example Workflow Setup:**
+```
+Video Path String → VHS_LoadVideoPath → SegmDetectorSEGS → CloseUpNode
+                          ↓
+UltralyticsDetectorProvider (with PitEyeDetailer-v2-seg.pt)
+```
+
+The workflow uses:
+- **UltralyticsDetectorProvider**: Load the `segm/PitEyeDetailer-v2-seg.pt` model
+- **VHS_LoadVideoPath**: Load video frames (set frame_load_cap to 1 for single frame detection)
+- **SegmDetectorSEGS**: Generate SEGS data from eye segmentation on the video frame
+- **CloseUpNode**: Process the video with face-centered zoom
+
+### **Inputs**
+
+| Name          | Type   | Description                                      |
+| --------------| ------ | ------------------------------------------------ |
+| `video_path`  | STRING | Full path to the input video file                |
+| `segs`        | SEGS   | Segmentation data containing eye detections      |
+| `zoom_factor` | FLOAT  | Zoom multiplier (default: 1.5, min: 1.0)        |
+| `prefix`      | STRING | Output filename prefix (default: "close_up")     |
+
+### **Outputs**
+
+* `output_path` – Full path to the processed video file
+
+### **How it works**
+
+1. Extracts video metadata (duration, FPS, resolution) using ffprobe
+2. Extracts all frames from the video using ffmpeg
+3. Processes SEGS data to find valid eye detections (label='eye', confidence > 0.4)
+4. Calculates face center as midpoint between the first two detected eye centers
+5. Applies zoom by cropping centered on the face center and resizing back to original dimensions
+6. Saves processed frames as temporary PNG files
+7. Re-encodes frames to video at original FPS with H.264 codec
+8. Copies original audio stream (if present) into the final video
+9. Cleans up temporary frame files automatically
+
+### **Eye Detection**
+
+- Filters SEGS for segments with label 'eye' and confidence > 0.4
+- Requires at least 2 valid eye detections
+- Calculates eye centers from bounding box coordinates: `(x1+x2)/2`, `(y1+y2)/2`
+- Face center = midpoint between eye centers
+
+### **Zoom Implementation**
+
+- Crop region is calculated as `original_size / zoom_factor`
+- Crop is centered on the calculated face center point
+- Clamped to prevent going outside video boundaries
+- Resized back to original dimensions using bicubic interpolation
+
+### **Audio Handling**
+
+* Automatically detects and preserves audio streams from the original video
+* Uses ffmpeg stream copying for lossless audio preservation
+* Works with any audio codec supported by the input video
 
 ---
 

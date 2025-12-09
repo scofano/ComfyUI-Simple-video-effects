@@ -432,7 +432,7 @@ class VideoOverlayBatch:
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("video_output_path",)
     FUNCTION = "apply_overlay"
-    CATEGORY = "Simple Video Effects"
+    CATEGORY = "Simple Video Effects/Video Processing"
 
     def apply_overlay(
         self,

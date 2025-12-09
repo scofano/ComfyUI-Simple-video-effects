@@ -81,7 +81,7 @@ class ZoomSequenceNode:
     RETURN_TYPES = ("IMAGE", "STRING",)
     RETURN_NAMES = ("images", "info",)
     FUNCTION = "run"
-    CATEGORY = "Simple Video Effects"
+    CATEGORY = "Simple Video Effects/Image Processing"
 
     # ---- helpers -------------------------------------------------------------
     def _resize_to(self, frame_hwc: torch.Tensor, size_hw):

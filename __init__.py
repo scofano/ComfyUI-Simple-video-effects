@@ -9,6 +9,10 @@ from .comfy_video_overlay_batch import VideoOverlayBatch
 from .comfy_audio_video_merger import MergeVideoAudioNode
 from .comfy_image_transition import ImageTransitionNode
 from .comfy_video_splitter import VideoSplitterNode
+from .comfy_camera_move_video import CameraMoveVideoNode
+from .comfy_camera_shake_video import CameraShakeVideoNode
+from .comfy_zoom_sequence_video import ZoomSequenceVideoNode
+from .comfy_close_up import CloseUpNode
 
 
 NODE_CLASS_MAPPINGS = {
@@ -23,6 +27,10 @@ NODE_CLASS_MAPPINGS = {
     "MergeVideoAudioNode": MergeVideoAudioNode,
     "ImageTransitionNode": ImageTransitionNode,
     "VideoSplitterNode": VideoSplitterNode,
+    "CameraMoveVideoNode": CameraMoveVideoNode,
+    "CameraShakeVideoNode": CameraShakeVideoNode,
+    "ZoomSequenceVideoNode": ZoomSequenceVideoNode,
+    "CloseUpNode": CloseUpNode,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -37,6 +45,10 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "MergeVideoAudioNode": "Merge Video + Audio (ffmpeg)",
     "ImageTransitionNode": "Image Transition",
     "VideoSplitterNode": "Video Splitter (ASS Subtitles)",
+    "CameraMoveVideoNode": "Camera Move (Video File)",
+    "CameraShakeVideoNode": "Camera Shake (Video File)",
+    "ZoomSequenceVideoNode": "Zoom Sequence (Video File)",
+    "CloseUpNode": "Close Up (Face Centered)",
 }
 
 __all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS"]

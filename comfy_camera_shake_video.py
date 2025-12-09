@@ -1,7 +1,23 @@
-# comfy_zoom_sequence.py (modified to be Camera Shake instead of Zoom)
+import os
+import shutil
+import subprocess
+import tempfile
 import math
+from pathlib import Path
 import torch
 import torch.nn.functional as F
+
+# ComfyUI folder_paths
+try:
+    import folder_paths
+    OUTPUT_DIR = folder_paths.get_output_directory()
+except ImportError:
+    OUTPUT_DIR = Path("output")
+
+FFMPEG = shutil.which("ffmpeg")
+FFPROBE = shutil.which("ffprobe")
+if not FFMPEG or not FFPROBE:
+    raise RuntimeError("ffmpeg and ffprobe not found on PATH.")
 
 # ---------- EASING ------------------------------------------------------------
 def ease_value(t: float, mode: str) -> float:
@@ -29,37 +45,113 @@ def normalize_mode(mode: str) -> str:
     # Default to circular if unclear
     return "CIRCULAR"
 
-# ---------- NODE --------------------------------------------------------------
-class CameraShakeNode:
-    """
-    CAMERA SHAKE across a batched IMAGE (video/sequence). The canvas size stays fixed and
-    the original aspect ratio is preserved for every frame.
+def get_video_info(video_path):
+    """Get video duration, fps, width, height"""
+    cmd = [
+        FFPROBE,
+        "-v", "quiet",
+        "-print_format", "json",
+        "-show_format",
+        "-show_streams",
+        video_path
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    import json
+    data = json.loads(result.stdout)
 
-    Parameters
-    ----------
-    mode: "Circular Shake" or "Random Shake"
-    pixels_per_frame (FLOAT):
-        Interpreted as the *maximum shake radius* on the SMALLER canvas dimension (per-side).
-        Higher value => bigger possible X/Y shift.
-    ease: "Linear", "Ease_In", "Ease_Out", "Ease_In_Out"
-        Eases the shake radius over time (0..1 envelope across the sequence).
+    duration = float(data['format']['duration'])
+
+    # Find video stream
+    video_stream = None
+    for stream in data['streams']:
+        if stream['codec_type'] == 'video':
+            video_stream = stream
+            break
+
+    if video_stream:
+        fps_str = video_stream.get('r_frame_rate', '30/1')
+        if '/' in fps_str:
+            num, den = fps_str.split('/')
+            fps = float(num) / float(den)
+        else:
+            fps = float(fps_str)
+        width = int(video_stream['width'])
+        height = int(video_stream['height'])
+    else:
+        fps = 30.0
+        width = 1920
+        height = 1080
+
+    return duration, fps, width, height
+
+
+def extract_frames(video_path, output_dir, fps):
+    """Extract frames from video"""
+    frames_dir = output_dir / "frames"
+    frames_dir.mkdir(exist_ok=True)
+
+    cmd = [
+        FFMPEG,
+        "-i", video_path,
+        "-vf", f"fps={fps}",
+        str(frames_dir / "frame_%06d.png")
+    ]
+    subprocess.run(cmd, check=True)
+
+    return frames_dir
+
+
+def load_frames(frames_dir):
+    """Load frames as torch tensor"""
+    from PIL import Image
+    import numpy as np
+
+    frame_files = sorted(frames_dir.glob("frame_*.png"))
+    if not frame_files:
+        raise ValueError("No frames extracted")
+
+    frames = []
+    for frame_file in frame_files:
+        img = Image.open(frame_file).convert("RGB")
+        arr = np.array(img).astype(np.float32) / 255.0
+        frames.append(torch.from_numpy(arr))
+
+    if not frames:
+        raise ValueError("No frames loaded")
+
+    # Stack to (B, H, W, C)
+    images = torch.stack(frames, dim=0)
+    return images
+
+
+# ---------- NODE --------------------------------------------------------------
+class CameraShakeVideoNode:
+    """
+    Camera shake / procedural handheld motion for a video file.
+
+    Takes a video file path and applies shake effects, then outputs a new video
+    with the same audio (if present).
+
+    Supports circular or random shake patterns with configurable intensity and easing.
     """
 
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(cls):
         return {
             "required": {
-                "images": ("IMAGE",),
+                "video_path": ("STRING", {"default": ""}),
                 "mode": (["Circular Shake", "Random Shake"], {"default": "Circular Shake"}),
                 "pixels_per_frame": ("FLOAT", {"default": 5.0, "min": 0.0, "step": 0.1}),
                 "ease": (["Linear", "Ease_In", "Ease_Out", "Ease_In_Out"], {"default": "Linear"}),
+                "prefix": ("STRING", {"default": "camera_shake"}),
             }
         }
 
-    RETURN_TYPES = ("IMAGE", "STRING",)
-    RETURN_NAMES = ("images", "info",)
-    FUNCTION = "run"
-    CATEGORY = "Simple Video Effects/Image Processing"
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("output_path",)
+    FUNCTION = "apply_camera_shake"
+    CATEGORY = "Simple Video Effects/Video Processing"
+    OUTPUT_NODE = True
 
     # ---- helpers -------------------------------------------------------------
     def _resize_to(self, frame_hwc: torch.Tensor, size_hw):
@@ -130,7 +222,72 @@ class CameraShakeNode:
         return x0, y0, x1, y1, m_x, m_y
 
     # ---- main ---------------------------------------------------------------
-    def run(self, images: torch.Tensor, mode: str, pixels_per_frame: float, ease: str):
+    def apply_camera_shake(self,
+                          video_path: str,
+                          mode: str,
+                          pixels_per_frame: float,
+                          ease: str,
+                          prefix: str):
+
+        if not os.path.exists(video_path):
+            raise ValueError(f"Video file not found: {video_path}")
+
+        # Get video info
+        duration, fps, width, height = get_video_info(video_path)
+
+        # Create output folder
+        output_dir = Path(OUTPUT_DIR)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        counter = 1
+        while True:
+            filename = f"{prefix}_{counter:03d}.mp4"
+            output_path = output_dir / filename
+            if not output_path.exists():
+                break
+            counter += 1
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir = Path(tmpdir)
+
+            # Extract frames
+            frames_dir = extract_frames(video_path, tmpdir, fps)
+            images = load_frames(frames_dir)
+
+            # Apply camera shake (same logic as image version)
+            shaken_images, info = self._apply_shake(images, mode, pixels_per_frame, ease)
+
+            # Save processed frames
+            processed_frames_dir = tmpdir / "processed_frames"
+            processed_frames_dir.mkdir()
+
+            for i, img_tensor in enumerate(shaken_images):
+                # Convert to PIL
+                arr = (img_tensor.clamp(0, 1) * 255).byte().numpy()
+                from PIL import Image
+                img = Image.fromarray(arr)
+                img.save(processed_frames_dir / f"frame_{i:06d}.png")
+
+            # Encode to video with audio
+            cmd = [
+                FFMPEG,
+                "-y",
+                "-framerate", str(fps),
+                "-i", str(processed_frames_dir / "frame_%06d.png"),
+                "-i", video_path,  # for audio
+                "-c:v", "libx264",
+                "-c:a", "copy",  # copy audio if exists
+                "-pix_fmt", "yuv420p",
+                "-map", "0:v:0",  # video from frames
+                "-map", "1:a?",  # audio from original (optional)
+                str(output_path)
+            ]
+            subprocess.run(cmd, check=True)
+
+        return (str(output_path),)
+
+    def _apply_shake(self, images, mode, pixels_per_frame, ease):
+        """Apply camera shake to images (copied from CameraShakeNode)"""
         if images.ndim != 4:
             return (images, "Input is not a batched IMAGE (B,H,W,C).")
         B, H, W, C = images.shape
