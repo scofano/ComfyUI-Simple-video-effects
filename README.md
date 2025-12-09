@@ -11,6 +11,7 @@ This bundle includes:
 4. **Camera Shake** – procedural handheld/chaotic motion
 5. **Video Overlay** – alpha-blend / composite one video over another
 6. **Image Transition** – create transition videos between two images
+7. **Video Splitter (ASS Subtitles)** – split videos based on subtitle punctuation
 
 ---
 
@@ -349,6 +350,57 @@ Temporary files (WAV audio, concat lists) are deleted automatically.
 * If audio trimming is enabled, the script ensures fade-outs occur **before** the audio ends.
 * Fades and transitions never exceed clip lengths; they are automatically clamped.
 * Color fade-ins and fade-outs use ffmpeg's `color` source generator.
+
+---
+
+# 🎥 **8. Video Splitter (ASS Subtitles)**
+
+Split videos based on punctuation marks in ASS subtitle files
+Source: *comfy_video_splitter.py*
+
+### **What it does**
+
+Automatically splits a video into segments based on punctuation marks (., !, ?) found at the end of dialogue lines in ASS subtitle files. Each segment is saved as a separate MP4 file in a timestamped output folder.
+
+### **Key Features**
+
+* Parses ASS subtitle files to extract dialogue timings and text
+* Splits video at the end times of dialogues ending with specified divider characters
+* Ensures minimum segment duration to avoid very short clips
+* Adds configurable padding to segment ends (except the last segment)
+* Maintains 1-frame gaps between segments for clean transitions
+* Re-encodes segments for precise cutting and audio synchronization
+* Automatic folder creation with incremental naming to avoid overwrites
+
+### **Inputs**
+
+| Name                  | Type   | Description                                      |
+| --------------------- | ------ | ------------------------------------------------ |
+| `video_path`          | STRING | Full path to the input video file                |
+| `ass_path`            | STRING | Full path to the ASS subtitle file               |
+| `divider_chars`       | STRING | Characters to split on (default: ".!?")         |
+| `folder_prefix`       | STRING | Prefix for output folder name                    |
+| `min_audio_duration`  | INT    | Minimum segment duration in seconds (default: 5) |
+| `end_padding`         | FLOAT  | Seconds to add to end of each segment (default: 0.2) |
+
+### **Outputs**
+
+* `output_folder` – Full path to the folder containing split video segments
+
+### **How it works**
+
+1. Parses the ASS file to find dialogues ending with divider characters
+2. Filters split points to ensure each segment meets the minimum duration
+3. Splits the video using ffmpeg with precise start/end times
+4. Adds padding to segment ends while maintaining frame-accurate gaps
+5. Saves segments as `original_filename_[000].mp4`, `[001].mp4`, etc.
+
+### **Special Handling**
+
+* Treats "…" (ellipsis) as "." for splitting
+* Ignores sequences like ".." or "..." as invalid dividers
+* Cleans ASS formatting tags from subtitle text
+* Ensures no segments are shorter than the minimum duration by combining when necessary
 
 ---
 

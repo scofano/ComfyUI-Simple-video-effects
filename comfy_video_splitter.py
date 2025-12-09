@@ -106,6 +106,7 @@ class VideoSplitterNode:
                 "divider_chars": ("STRING", {"default": ".!?"}),
                 "folder_prefix": ("STRING", {"default": "split_video"}),
                 "min_audio_duration": ("INT", {"default": 5, "min": 1}),
+                "end_padding": ("FLOAT", {"default": 0.2, "min": 0.0, "step": 0.1}),
             }
         }
 
@@ -115,7 +116,7 @@ class VideoSplitterNode:
     CATEGORY = "Simple Video Effects"
     OUTPUT_NODE = True
 
-    def split_video(self, video_path, ass_path, divider_chars, folder_prefix, min_audio_duration):
+    def split_video(self, video_path, ass_path, divider_chars, folder_prefix, min_audio_duration, end_padding):
         if not os.path.exists(video_path):
             raise ValueError(f"Video file not found: {video_path}")
         if not os.path.exists(ass_path):
@@ -178,20 +179,32 @@ class VideoSplitterNode:
                 counter += 1
         output_folder.mkdir()
 
+        # Get fps for frame duration
+        fps = get_video_fps(video_path)
+        frame_duration = 1.0 / fps
+
         video_name = Path(video_path).stem
         file_counter = 0
-        
+        prev_end = 0.0
+
         for i in range(len(times) - 1):
-            start_time = times[i]
+            start_time = prev_end
             end_time = times[i + 1]
+
+            # Add padding to end_time for non-last segments
+            if i < len(times) - 2:
+                end_time += end_padding
+                if end_time > duration:
+                    end_time = duration
 
             # Avoid tiny segments or negative duration
             if end_time - start_time < 0.1:
+                prev_end = end_time + frame_duration
                 continue
 
             output_file = output_folder / f"{video_name}_[{file_counter:03d}].mp4"
             duration_segment = end_time - start_time
-            
+
             print(f"Exporting segment {file_counter}: {start_time} to {end_time}")
 
             cmd = [
@@ -208,5 +221,6 @@ class VideoSplitterNode:
             ]
             subprocess.run(cmd, check=True)
             file_counter += 1
+            prev_end = end_time + frame_duration
 
         return (str(output_folder),)
