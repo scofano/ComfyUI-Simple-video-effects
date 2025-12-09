@@ -8,6 +8,7 @@ from .comfy_video_image_overlay import VideoImageOverlay
 from .comfy_video_overlay_batch import VideoOverlayBatch
 from .comfy_audio_video_merger import MergeVideoAudioNode
 from .comfy_image_transition import ImageTransitionNode
+from .comfy_video_splitter import VideoSplitterNode
 
 
 NODE_CLASS_MAPPINGS = {
@@ -21,6 +22,7 @@ NODE_CLASS_MAPPINGS = {
     "VideoOverlayBatch": VideoOverlayBatch,
     "MergeVideoAudioNode": MergeVideoAudioNode,
     "ImageTransitionNode": ImageTransitionNode,
+    "VideoSplitterNode": VideoSplitterNode,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -34,6 +36,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "VideoOverlayBatch": "Video Overlay (Video Path)",
     "MergeVideoAudioNode": "Merge Video + Audio (ffmpeg)",
     "ImageTransitionNode": "Image Transition",
+    "VideoSplitterNode": "Video Splitter (ASS Subtitles)",
 }
 
 __all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS"]
