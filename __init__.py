@@ -13,6 +13,7 @@ from .comfy_camera_move_video import CameraMoveVideoNode
 from .comfy_camera_shake_video import CameraShakeVideoNode
 from .comfy_zoom_sequence_video import ZoomSequenceVideoNode
 from .comfy_close_up import CloseUpNode
+from .comfy_video_loop_extender import VideoLoopExtenderNode
 
 
 NODE_CLASS_MAPPINGS = {
@@ -31,6 +32,7 @@ NODE_CLASS_MAPPINGS = {
     "CameraShakeVideoNode": CameraShakeVideoNode,
     "ZoomSequenceVideoNode": ZoomSequenceVideoNode,
     "CloseUpNode": CloseUpNode,
+    "VideoLoopExtenderNode": VideoLoopExtenderNode,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -49,6 +51,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "CameraShakeVideoNode": "Camera Shake (Video File)",
     "ZoomSequenceVideoNode": "Zoom Sequence (Video File)",
     "CloseUpNode": "Close Up (Face Centered)",
+    "VideoLoopExtenderNode": "Video Loop Extender",
 }
 
 __all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS"]

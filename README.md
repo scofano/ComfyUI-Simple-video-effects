@@ -16,6 +16,7 @@ This bundle includes:
 9. **Camera Shake (Video File)** – apply camera shake effects to video files with audio preservation
 10. **Zoom Sequence (Video File)** – apply zoom effects to video files with audio preservation
 11. **Close Up (Face Centered)** – face-centered zoom using eye detection from SEGS
+12. **Video Loop Extender** – duplicate and merge video files multiple times
 
 ---
 
@@ -676,6 +677,58 @@ The workflow uses:
 
 * Automatically detects and preserves audio streams from the original video
 * Uses ffmpeg stream copying for lossless audio preservation
+* Works with any audio codec supported by the input video
+
+---
+
+# 🎥 **13. Video Loop Extender**
+
+Duplicate and merge video files multiple times
+Source: *comfy_video_loop_extender.py*
+
+### **What it does**
+
+Takes a video file path and extends it by duplicating and concatenating the video N times, creating a longer looped version. Preserves audio if present and optionally deletes the original file after processing.
+
+### **Key Features**
+
+* Extends video by repeating it multiple times (loop creation)
+* Preserves original audio streams automatically
+* Optional deletion of the original video file after processing
+* Automatic output filename generation with incrementing numbers
+* Supports common video formats (MP4, AVI, MOV, MKV, WebM)
+
+### **Inputs**
+
+| Name                | Type    | Description                                      |
+| --------------------| ------- | ------------------------------------------------ |
+| `video_path`        | STRING  | Full path to the input video file                |
+| `extend_factor`     | FLOAT   | Number of times to duplicate (min: 1.0)         |
+| `delete_original`   | BOOLEAN | Delete original file after processing (default: False) |
+
+### **Outputs**
+
+* `output_path` – Full path to the extended video file
+
+### **How it works**
+
+1. Validates the input video file exists and has a supported format
+2. Uses ffmpeg to create multiple input streams of the same video
+3. Concatenates all streams into a single extended video
+4. Encodes the output with H.264 video and AAC audio codecs
+5. Optionally deletes the original video file if toggled
+6. Saves the extended video to the ComfyUI output directory with a unique filename
+
+### **Filename Generation**
+
+* Base name from original file with "_extended_x{N}" suffix
+* Automatic numbering to avoid overwriting existing files
+* Example: `myvideo.mp4` → `myvideo_extended_x5_001.mp4`
+
+### **Audio Preservation**
+
+* Automatically detects and preserves audio streams from the original video
+* Uses ffmpeg stream concatenation to maintain audio synchronization
 * Works with any audio codec supported by the input video
 
 ---
