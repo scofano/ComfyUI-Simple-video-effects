@@ -133,6 +133,7 @@ class CameraShakeVideoNode:
     with the same audio (if present).
 
     Supports circular or random shake patterns with configurable intensity and easing.
+    When loop is enabled, uses circular shake with constant radius for seamless looping.
     """
 
     @classmethod
@@ -143,6 +144,7 @@ class CameraShakeVideoNode:
                 "mode": (["Circular Shake", "Random Shake"], {"default": "Circular Shake"}),
                 "pixels_per_frame": ("FLOAT", {"default": 5.0, "min": 0.0, "step": 0.1}),
                 "ease": (["Linear", "Ease_In", "Ease_Out", "Ease_In_Out"], {"default": "Linear"}),
+                "loop": ("BOOLEAN", {"default": False}),
                 "prefix": ("STRING", {"default": "camera_shake"}),
             }
         }
@@ -227,6 +229,7 @@ class CameraShakeVideoNode:
                           mode: str,
                           pixels_per_frame: float,
                           ease: str,
+                          loop: bool,
                           prefix: str):
 
         if not os.path.exists(video_path):
@@ -255,7 +258,7 @@ class CameraShakeVideoNode:
             images = load_frames(frames_dir)
 
             # Apply camera shake (same logic as image version)
-            shaken_images, info = self._apply_shake(images, mode, pixels_per_frame, ease)
+            shaken_images, info = self._apply_shake(images, mode, pixels_per_frame, ease, loop)
 
             # Save processed frames
             processed_frames_dir = tmpdir / "processed_frames"
@@ -286,7 +289,7 @@ class CameraShakeVideoNode:
 
         return (str(output_path),)
 
-    def _apply_shake(self, images, mode, pixels_per_frame, ease):
+    def _apply_shake(self, images, mode, pixels_per_frame, ease, loop):
         """Apply camera shake to images (copied from CameraShakeNode)"""
         if images.ndim != 4:
             return (images, "Input is not a batched IMAGE (B,H,W,C).")
@@ -296,6 +299,8 @@ class CameraShakeVideoNode:
 
         # Normalize
         shake_mode = normalize_mode(mode)
+        if loop:
+            shake_mode = "CIRCULAR"
         i_ease = ease
 
         # Compute scalar radius on the smaller dimension (per-side)
@@ -321,12 +326,12 @@ class CameraShakeVideoNode:
 
         out_frames = []
         # How many circles across the sequence for circular shake
-        num_cycles = 2.0
+        num_cycles = 1.0 if loop else 2.0
 
         for i in range(B):
             t = ts[i]
             # Envelope (0..1) over time for radius
-            radius_factor = es[i] if B > 1 else 1.0
+            radius_factor = 1.0 if loop else (es[i] if B > 1 else 1.0)
 
             # Per-axis max amplitude for this frame
             ax = m_x * radius_factor
@@ -400,7 +405,7 @@ class CameraShakeVideoNode:
 
         info_lines = []
         info_lines.append(f"Frames: {B}, Canvas: {W}x{H}")
-        info_lines.append(f"Mode: {shake_mode}, Ease: {ease}")
+        info_lines.append(f"Mode: {shake_mode}, Ease: {ease}, Loop: {loop}")
         info_lines.append(f"Requested small-dim radius: {requested_radius_small_f:.2f} px")
         info_lines.append(f"Applied small-dim radius:   {radius_small_f:.2f} px (safe limit: {max_safe_small_margin} px)")
         info_lines.append(f"Per-axis margins (max shake): m_x={m_x}, m_y={m_y}")
