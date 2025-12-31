@@ -142,17 +142,17 @@ pan or tracking-shot effect.
 Procedural handheld shake
 Source: *comfy_camera_shake.py*
 
-
 ### **What it does**
 
-Adds natural-feeling camera shake using Perlin/random noise.
+Adds natural-feeling camera shake using circular or random motion patterns.
 
 ### **Features**
 
-* Adjustable shake amplitude
-* Frequency control
-* Random seed for reproducibility
-* Optional motion-blur-friendly smoothness
+* Circular or random shake modes
+* Adjustable shake radius
+* Easing control for shake envelope
+* Loop toggle for seamless looping
+* Aspect-correct cropping prevents black edges
 
 Great for action shots, handheld look, or simulating vibrations.
 
@@ -488,13 +488,14 @@ Takes a video file path and applies procedural camera shake effects (circular or
 
 ### **Inputs**
 
-| Name              | Type   | Description                                        |
-| ----------------- | ------ | -------------------------------------------------- |
-| `video_path`      | STRING | Full path to the input video file                  |
-| `mode`            | Select | Circular Shake, Random Shake                       |
-| `pixels_per_frame`| FLOAT  | Shake radius on smaller dimension (default: 5.0)   |
-| `ease`            | Select | Linear, Ease_In, Ease_Out, Ease_In_Out             |
-| `prefix`          | STRING | Output filename prefix (default: "camera_shake")   |
+| Name              | Type    | Description                                        |
+| ----------------- | ------- | -------------------------------------------------- |
+| `video_path`      | STRING  | Full path to the input video file                  |
+| `mode`            | Select  | Circular Shake, Random Shake                       |
+| `pixels_per_frame`| FLOAT   | Shake radius on smaller dimension (default: 5.0)   |
+| `ease`            | Select  | Linear, Ease_In, Ease_Out, Ease_In_Out             |
+| `loop`            | BOOLEAN | Enable seamless looping (default: False)           |
+| `prefix`          | STRING  | Output filename prefix (default: "camera_shake")   |
 
 ### **Outputs**
 
@@ -521,6 +522,7 @@ Supports the same shake patterns as the image Camera Shake node:
 
 - **Radius**: Controls maximum shake displacement based on smaller canvas dimension
 - **Easing**: Applies envelope over time (0..1) to modulate shake intensity
+- **Loop**: When enabled, forces circular shake with constant radius for seamless looping
 - **Safe Cropping**: Uses aspect-corrected margins to prevent black borders during shake
 
 ### **Audio Handling**
