@@ -18,6 +18,7 @@ This bundle includes:
 11. **Close Up (Face Centered)** – face-centered zoom using eye detection from SEGS
 12. **Close Up Image** – image-based face-centered zoom using eye detection from SEGS
 13. **Video Loop Extender** – duplicate and merge video files multiple times
+14. **Image Sequence Overlay** – apply overlay animations to image sequences with progress indication
 
 ---
 
@@ -808,6 +809,41 @@ Takes a video file path and extends it by duplicating and concatenating the vide
 * Automatically detects and preserves audio streams from the original video
 * Uses ffmpeg stream concatenation to maintain audio synchronization
 * Works with any audio codec supported by the input video
+
+---
+
+# 🎥 **15. Image Sequence Overlay**
+
+Apply animated overlays to image sequences with progress tracking
+Source: *comfy_image_sequence_overlay.py*
+
+### **What it does**
+
+Applies PNG overlay animations from a folder to a sequence of images, with real-time progress indication during processing.
+
+### **Key Features**
+
+* Loads overlay PNG files from a specified folder
+* Supports different animation modes: loop, run once, run once and hold, ping pong
+* Displays a progress bar widget that updates in real-time during execution
+* Automatic resizing of overlays to match input dimensions
+* Alpha compositing for transparent overlays
+
+### **Inputs**
+
+| Name          | Type    | Description                                      |
+| --------------| ------- | ------------------------------------------------ |
+| `images`      | IMAGE   | Sequence of images to overlay                    |
+| `folder_path` | STRING  | Path to folder containing PNG overlay files      |
+| `mode`        | Select  | Animation mode: loop, run_once, run_once_and_hold, ping_pong |
+
+### **Outputs**
+
+* `images` – Overlayed image sequence
+
+### **Progress Bar**
+
+The node includes a LiteGraph progress bar widget that shows the completion percentage (0.0 to 1.0) during the overlay application process, providing visual feedback on long-running operations.
 
 ---
 
