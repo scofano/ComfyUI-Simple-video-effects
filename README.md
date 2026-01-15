@@ -11,14 +11,16 @@ This bundle includes:
 4. **Camera Shake** – procedural handheld/chaotic motion
 5. **Video Overlay** – alpha-blend / composite one video over another
 6. **Image Transition** – create transition videos between two images
-7. **Video Splitter (ASS Subtitles)** – split videos based on subtitle punctuation
-8. **Camera Move (Video File)** – apply camera movement to video files with audio preservation
-9. **Camera Shake (Video File)** – apply camera shake effects to video files with audio preservation
-10. **Zoom Sequence (Video File)** – apply zoom effects to video files with audio preservation
-11. **Close Up (Face Centered)** – face-centered zoom using eye detection from SEGS
-12. **Close Up Image** – image-based face-centered zoom using eye detection from SEGS
-13. **Video Loop Extender** – duplicate and merge video files multiple times
-14. **Image Sequence Overlay** – apply overlay animations to image sequences with progress indication
+7. **Simple Folder Video Combiner** – concatenate multiple video files from a directory
+8. **Advanced Folder Video Combiner** – advanced video combining with transitions, fades, and audio
+9. **Video Splitter (ASS Subtitles)** – split videos based on subtitle punctuation
+10. **Camera Move (Video File)** – apply camera movement to video files with audio preservation
+11. **Camera Shake (Video File)** – apply camera shake effects to video files with audio preservation
+12. **Zoom Sequence (Video File)** – apply zoom effects to video files with audio preservation
+13. **Close Up (Face Centered)** – face-centered zoom using eye detection from SEGS
+14. **Close Up Image** – image-based face-centered zoom using eye detection from SEGS
+15. **Video Loop Extender** – duplicate and merge video files multiple times
+16. **Image Sequence Overlay** – apply overlay animations to image sequences with progress indication
 
 ---
 
@@ -28,6 +30,12 @@ Place all `.py` files into:
 
 ```
 ComfyUI/custom_nodes/ComfyUI_SimpleVideoEffects/
+```
+
+Install the required dependencies:
+
+```
+pip install -r requirements.txt
 ```
 
 Restart ComfyUI.
@@ -230,7 +238,60 @@ The node creates a frame-by-frame animation where image2 is gradually revealed o
 
 ---
 
-# 🎥 **7. Comfy Video Combiner**
+# 🎥 **7. Simple Folder Video Combiner**
+
+Simple concatenation of multiple video files from a directory
+Source: *comfy_simple_video_combiner.py*
+
+### **What it does**
+
+Takes a directory path and concatenates all video files matching a pattern (e.g., `*.mp4`) into a single output video file. Files are combined in alphabetical order using efficient ffmpeg concatenation.
+
+### **Key Features**
+
+* Simple and fast video concatenation
+* Automatic file discovery with glob pattern matching
+* Supports GPU-accelerated encoding (NVENC)
+* Unique output filename generation to avoid overwrites
+* Automatic cleanup of temporary files
+
+### **Inputs**
+
+| Name               | Type    | Description                                      |
+| ------------------ | ------- | ------------------------------------------------ |
+| `directory_path`   | STRING  | Path to directory containing video files         |
+| `output_filename`  | STRING  | Name for output file (default: "combined_output.mp4") |
+| `file_pattern`     | STRING  | Glob pattern for matching files (default: "*.mp4") |
+| `use_gpu`          | BOOLEAN | Enable GPU encoding (NVENC) (default: True)      |
+
+### **Outputs**
+
+* `output_path` – Full path to the concatenated video file
+
+### **How it works**
+
+1. Scans the specified directory for files matching the pattern
+2. Sorts files alphabetically
+3. Creates a temporary concat file list for ffmpeg
+4. Uses ffmpeg's concat demuxer to join videos efficiently
+5. Encodes output with H.264 (optionally with NVENC GPU acceleration)
+6. Cleans up temporary files automatically
+
+### **Performance**
+
+* Uses ffmpeg's optimized concat demuxer (no re-encoding of content)
+* GPU acceleration available for final output encoding
+* Minimal memory usage and fast processing
+
+### **Use Cases**
+
+* Combining multiple video clips from a sequence
+* Merging rendered animation frames
+* Creating compilation videos from separate segments
+
+---
+
+# 🎥 **8. Advanced Folder Video Combiner**
 
 This script provides a **ComfyUI-compatible node** for automatically combining multiple video files from a directory into a single edited output.
 It offers robust handling of transitions, fades, audio overlays, randomization, and resolution normalization—all wrapped in an easy-to-use, configurable ComfyUI node.

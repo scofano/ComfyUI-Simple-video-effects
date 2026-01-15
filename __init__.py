@@ -4,6 +4,7 @@ from .comfy_camera_shake import CameraShakeNode
 from .comfy_video_overlay import VideoOverlay
 from .comfy_camera_move import CameraMoveNode
 from .comfy_video_combiner import ComfyVideoCombiner
+from .comfy_simple_video_combiner import ComfySimpleVideoCombiner
 from .comfy_video_image_overlay import VideoImageOverlay
 from .comfy_video_overlay_batch import VideoOverlayBatch
 from .comfy_audio_video_merger import MergeVideoAudioNode
@@ -25,6 +26,7 @@ NODE_CLASS_MAPPINGS = {
     "VideoOverlay": VideoOverlay,
     "CameraMoveNode": CameraMoveNode,
     "AdvancedFolderVideoCombiner": ComfyVideoCombiner,
+    "SimpleFolderVideoCombiner": ComfySimpleVideoCombiner,
     "VideoImageOverlay": VideoImageOverlay,
     "VideoOverlayBatch": VideoOverlayBatch,
     "MergeVideoAudioNode": MergeVideoAudioNode,
@@ -46,6 +48,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "VideoOverlay": "Video Overlay",
     "CameraMoveNode": "Camera Move",
     "AdvancedFolderVideoCombiner": "Advanced Folder Video Combiner",
+    "SimpleFolderVideoCombiner": "Simple Folder Video Combiner",
     "VideoImageOverlay": "Video Image Overlay",
     "VideoOverlayBatch": "Video Overlay (Video Path)",
     "MergeVideoAudioNode": "Merge Video + Audio (ffmpeg)",
