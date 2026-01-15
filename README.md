@@ -16,7 +16,8 @@ This bundle includes:
 9. **Camera Shake (Video File)** – apply camera shake effects to video files with audio preservation
 10. **Zoom Sequence (Video File)** – apply zoom effects to video files with audio preservation
 11. **Close Up (Face Centered)** – face-centered zoom using eye detection from SEGS
-12. **Video Loop Extender** – duplicate and merge video files multiple times
+12. **Close Up Image** – image-based face-centered zoom using eye detection from SEGS
+13. **Video Loop Extender** – duplicate and merge video files multiple times
 
 ---
 
@@ -29,6 +30,17 @@ ComfyUI/custom_nodes/ComfyUI_SimpleVideoEffects/
 ```
 
 Restart ComfyUI.
+
+---
+
+# 📁 **Workflow Examples**
+
+The custom node includes example workflows in the `workflows/` folder:
+
+* **close_up.json** – Contains example workflows for both Close Up (Face Centered) video node and Close Up Image node
+* Additional workflow examples demonstrating various node combinations and use cases
+
+Import these JSON files into ComfyUI to see complete working examples of how to use the nodes.
 
 ---
 
@@ -616,6 +628,8 @@ Takes a video file and SEGS segmentation data to detect eyes, calculates the cen
 
 ### **Requirements**
 
+**Important:** To use the close up nodes (both video and image versions), you must first install the **Impact Pack** nodes from https://github.com/ltdrdata/ComfyUI-Impact-Pack to enable SEGS functionality.
+
 **This node requires a specific workflow setup to generate the SEGS data for eye detection:**
 
 1. **Download the eye segmentation model**: Download `PitEyeDetailer-v2-seg.pt` from the Ultralytics models or compatible sources
@@ -681,7 +695,71 @@ The workflow uses:
 
 ---
 
-# 🎥 **13. Video Loop Extender**
+# 🎥 **13. Close Up Image**
+
+Image-based face-centered zoom using eye detection from SEGS data
+Source: *comfy_close_up_image.py*
+
+### **What it does**
+
+Takes an image and SEGS segmentation data to detect eyes, calculates the center point between them (face center), and applies a zoom effect centered on that point. Supports random zoom factor selection with optional steps.
+
+### **Key Features**
+
+* Processes SEGS data to find eye detections with confidence > 0.4
+* Calculates face center as midpoint between detected eye positions
+* Applies zoom factor centered on the calculated face center
+* Optional random zoom factor with customizable range and steps
+* Maintains aspect ratio and prevents over-zooming
+* Works with batched images
+
+### **Requirements**
+
+**Important:** To use the close up nodes (both video and image versions), you must first install the **Impact Pack** nodes from https://github.com/ltdrdata/ComfyUI-Impact-Pack to enable SEGS functionality.
+
+**This node requires SEGS data generated from image segmentation detection.**
+
+### **Inputs**
+
+| Name              | Type    | Description                                      |
+| ------------------| ------- | ------------------------------------------------ |
+| `image`           | IMAGE   | Input image tensor (supports batches)            |
+| `segs`            | SEGS    | Segmentation data containing eye detections      |
+| `zoom_factor`     | FLOAT   | Base zoom multiplier (default: 1.5, min: 1.0)   |
+| `random_zoom`     | BOOLEAN | Enable random zoom factor selection (default: False) |
+| `seed`            | INT     | Random seed for reproducible results (default: 0)|
+| `zoom_factor_min` | FLOAT   | Minimum zoom factor for random selection (default: 1.0) |
+| `steps`           | FLOAT   | Step size for random zoom values (default: 0.5) |
+
+### **Outputs**
+
+* `output_image` – Zoomed image(s) with face-centered cropping
+
+### **How it works**
+
+1. Processes SEGS data to find valid eye detections (label='eye', confidence > 0.4)
+2. Calculates face center as midpoint between the first two detected eye centers
+3. Applies random zoom selection if enabled (chooses from stepped values between min and max)
+4. Crops the image centered on the face center with zoom-adjusted dimensions
+5. Resizes the cropped region back to original dimensions using bicubic interpolation
+
+### **Eye Detection**
+
+- Filters SEGS for segments with label 'eye' and confidence > 0.4
+- Requires at least 2 valid eye detections
+- Calculates eye centers from bounding box coordinates: `(x1+x2)/2`, `(y1+y2)/2`
+- Face center = midpoint between eye centers
+
+### **Random Zoom**
+
+- When enabled, generates possible zoom factors from `zoom_factor_min` to `zoom_factor` in `steps` increments
+- Randomly selects one zoom factor for each image in the batch using the provided seed for reproducible results
+- Outputs the selected zoom factor to the CLI for monitoring
+- Useful for creating variation in zoom levels across multiple images
+
+---
+
+# 🎥 **14. Video Loop Extender**
 
 Duplicate and merge video files multiple times
 Source: *comfy_video_loop_extender.py*
