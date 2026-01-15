@@ -15,6 +15,7 @@ from .comfy_zoom_sequence_video import ZoomSequenceVideoNode
 from .comfy_close_up import CloseUpNode
 from .comfy_close_up_image import CloseUpImageNode
 from .comfy_video_loop_extender import VideoLoopExtenderNode
+from .comfy_image_sequence_overlay import ImageSequenceOverlay
 
 
 NODE_CLASS_MAPPINGS = {
@@ -35,6 +36,7 @@ NODE_CLASS_MAPPINGS = {
     "CloseUpNode": CloseUpNode,
     "CloseUpImageNode": CloseUpImageNode,
     "VideoLoopExtenderNode": VideoLoopExtenderNode,
+    "ImageSequenceOverlay": ImageSequenceOverlay,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -55,6 +57,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "CloseUpNode": "Video - Close Up (Face Centered)",
     "CloseUpImageNode": "Image - Close Up (Face Centered)",
     "VideoLoopExtenderNode": "Video Loop Extender",
+    "ImageSequenceOverlay": "Image Sequence Overlay",
 }
 
 __all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS"]
