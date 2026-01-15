@@ -21,6 +21,7 @@ This bundle includes:
 14. **Close Up Image** – image-based face-centered zoom using eye detection from SEGS
 15. **Video Loop Extender** – duplicate and merge video files multiple times
 16. **Image Sequence Overlay** – apply overlay animations to image sequences with progress indication
+17. **Video Overlay (File Input)** – apply overlay animations from PNG folders to video files with audio preservation
 
 ---
 
@@ -905,6 +906,81 @@ Applies PNG overlay animations from a folder to a sequence of images, with real-
 ### **Progress Bar**
 
 The node includes a LiteGraph progress bar widget that shows the completion percentage (0.0 to 1.0) during the overlay application process, providing visual feedback on long-running operations.
+
+---
+
+# 🎥 **16. Video Overlay (File Input)**
+
+Apply overlay animations from PNG folders to video files with audio preservation
+Source: *comfy_video_overlay_from_file.py*
+
+### **What it does**
+
+Takes a video file and applies animated overlays from a folder of PNG files, supporting various animation modes. Outputs a new video file with overlays composited and original audio preserved.
+
+### **Key Features**
+
+* Loads overlay PNG files from a specified folder in alphabetical order
+* Supports multiple animation modes: loop, run once, run once and hold, ping pong
+* Automatic detection of properly numbered overlay files (000001.png, 000002.png, etc.)
+* Fallback to sequential numbering for unnumbered files
+* Preserves original audio streams automatically
+* GPU-accelerated encoding support (NVENC)
+* Automatic output filename generation with incrementing numbers
+* Correct FFmpeg filter syntax for reliable overlay composition
+
+### **Inputs**
+
+| Name                | Type    | Description                                      |
+| --------------------| ------- | ------------------------------------------------ |
+| `video_path`        | STRING  | Full path to the input video file                |
+| `overlay_folder_path`| STRING | Path to folder containing PNG overlay files      |
+| `mode`              | Select  | Animation mode: loop, run_once, run_once_and_hold, ping_pong |
+| `prefix`            | STRING  | Output filename prefix (default: "video_overlay") |
+| `use_gpu`           | BOOLEAN | Enable GPU encoding (NVENC) (default: True)      |
+
+### **Outputs**
+
+* `output_path` – Full path to the processed video file
+
+### **Animation Modes**
+
+- **Loop**: Infinite loop of overlay sequence
+- **Run Once**: Play overlay sequence once, then show base video
+- **Run Once and Hold**: Play overlay sequence once, then hold the last frame
+- **Ping Pong**: Forward + reverse sequence for back-and-forth animation
+
+### **How it works**
+
+1. Probes input video for metadata (duration, FPS, resolution, audio codec)
+2. Scans overlay folder for PNG files and sorts alphabetically
+3. Checks if overlay files follow sequential naming pattern (000001.png, etc.)
+4. Creates temporary numbered overlay files if needed using symlinks/copy
+5. Builds FFmpeg filter graph with proper setpts normalization and overlay composition
+6. Encodes output video at original FPS with H.264 codec (optionally NVENC)
+7. Copies original audio stream (if present) into the final video
+8. Cleans up temporary files automatically
+
+### **Overlay File Requirements**
+
+- PNG format with transparency support
+- Files sorted alphabetically for sequence order
+- For direct path usage: files must be named 000001.png, 000002.png, etc.
+- For automatic numbering: any PNG filenames work (sorted alphabetically)
+
+### **Filter Graph Details**
+
+Uses properly constructed FFmpeg filter chains:
+- `[0:v]setpts=PTS-STARTPTS[base]` - Normalize base video timestamps
+- `[1:v]setpts=PTS-STARTPTS,tpad=...[ov]` - Normalize and pad overlay stream (for hold mode)
+- `[base][ov]overlay=0:0:format=auto` - Composite with auto format detection
+
+### **Audio Handling**
+
+* Automatically detects and preserves audio streams from the original video
+* Uses ffmpeg stream copying for lossless audio preservation
+* Works with any audio codec supported by the input video
+* Audio duration matches video duration (uses video stream duration, not container duration)
 
 ---
 

@@ -3,6 +3,7 @@ import torch
 import numpy as np
 from PIL import Image
 from pathlib import Path
+import comfy.utils
 
 class ImageSequenceOverlay:
     """
@@ -81,6 +82,7 @@ class ImageSequenceOverlay:
         output_frames = []
         images_np = images.detach().cpu().numpy()  # [N, H, W, C]
 
+        pbar = comfy.utils.ProgressBar(num_input)
         for i in range(num_input):
             # Get base image
             base_np = images_np[i]
@@ -103,6 +105,7 @@ class ImageSequenceOverlay:
             # Convert back to numpy
             output_np = np.array(base_pil).astype(np.float32) / 255.0
             output_frames.append(output_np)
+            pbar.update(1)
 
         # Stack back to tensor
         output_tensor = torch.from_numpy(np.stack(output_frames, axis=0))
