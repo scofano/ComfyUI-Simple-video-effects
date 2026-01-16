@@ -54,7 +54,7 @@ Import these JSON files into ComfyUI to see complete working examples of how to 
 
 ---
 <details>
-<summary>🎥 **1. ZoomSequenceNode**</summary>
+<summary>🎥 1. ZoomSequenceNode</summary>
 
 Single-batch smooth zoom-in/out with aspect-correct cropping
 Source: *comfy_zoom_sequence.py*  
@@ -96,7 +96,8 @@ All cropping is done with **integer-accurate** bounds.
 
 ---
 
-# 🎥 **2. ZoomSequenceNode (Batched / Persistent)**
+<details>
+<summary>🎥 2. ZoomSequenceNode (Batched / Persistent)</summary>
 
 Persistent zoom across multiple batches
 Source: *comfy_zoom_sequence_batched.py*  
@@ -133,6 +134,7 @@ The node tracks:
 * Easing + mode consistency
 
 State resets when the node reaches frame `source_frame_count - 1`.
+</details>
 
 ---
 
