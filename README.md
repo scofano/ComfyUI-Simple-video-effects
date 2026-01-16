@@ -1,6 +1,6 @@
 ![Header](header.jpg)
 
-# **ComfyUI Simple Video Effects**
+# 🎞️ **ComfyUI Simple Video Effects**
 
 A collection of lightweight, production-ready **video manipulation nodes for ComfyUI**.
 All nodes operate on **batched IMAGE tensors (B, H, W, C)** and are designed for smooth, high-quality transformations without breaking aspect ratio.
