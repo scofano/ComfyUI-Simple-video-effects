@@ -974,10 +974,10 @@ Restart ComfyUI.
 
 The custom node includes example workflows in the `workflows/` folder:
 
-* **close_up.json** – Contains example workflows for both Close Up (Face Centered) video node and Close Up Image node
-* Additional workflow examples demonstrating various node combinations and use cases
+* **close_up_image.json** – Example workflow demonstrating the Close Up Image node for face-centered zoom on image sequences
+* **close_up_video.json** – Example workflow demonstrating the Close Up (Face Centered) video node for face-centered zoom on video files
 
-Import these JSON files into ComfyUI to see complete working examples of how to use the nodes.
+Import these JSON files into ComfyUI to see complete working examples of how to use the close up nodes with proper SEGS segmentation setup.
 
 ---
 
