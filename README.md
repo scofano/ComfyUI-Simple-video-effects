@@ -53,8 +53,8 @@ The custom node includes example workflows in the `workflows/` folder:
 Import these JSON files into ComfyUI to see complete working examples of how to use the nodes.
 
 ---
-
-# 🎥 **1. ZoomSequenceNode**
+<details>
+<summary># 🎥 **1. ZoomSequenceNode**</summary>
 
 Single-batch smooth zoom-in/out with aspect-correct cropping
 Source: *comfy_zoom_sequence.py*  
@@ -92,7 +92,7 @@ The node computes a per-frame eased progress value, converts it into a
 **small-dimension margin**, and crops proportionally on both axes to retain aspect ratio
 before resizing back to original resolution.
 All cropping is done with **integer-accurate** bounds.
-
+</details>
 ---
 
 # 🎥 **2. ZoomSequenceNode (Batched / Persistent)**
