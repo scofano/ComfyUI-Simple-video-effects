@@ -1,8 +1,8 @@
 # pyproject.toml
 [project]
 name = "Simple-video-effects"  # Unique and immutable node identifier.
-description = "Nodes for Video effects. Zoom In/Out - new features soon."
-version = "1.0.0"  # Semantic versioning
+description = "Many nodes for Video effects."
+version = "1.1.0"  # Semantic versioning
 dependencies = []  # Populated from requirements.txt if present.
 
 [project.urls]
