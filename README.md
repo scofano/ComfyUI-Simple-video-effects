@@ -138,7 +138,8 @@ State resets when the node reaches frame `source_frame_count - 1`.
 
 ---
 
-# 🎥 **3. CameraMoveNode**
+<details>
+<summary>🎥 3. CameraMoveNode</summary>
 
 Smooth pan / slide / 2D translation
 Source: *comfy_camera_move.py*
@@ -161,9 +162,12 @@ pan or tracking-shot effect.
 * Frames translated with border fill (usually black or edge-clamped)
 * Handy for synthetic dolly, parallax, or motion-graphics effects
 
+</details>
+
 ---
 
-# 🎥 **4. CameraShakeNode**
+<details>
+<summary>🎥 4. CameraShakeNode</summary>
 
 Procedural handheld shake
 Source: *comfy_camera_shake.py*
@@ -182,9 +186,12 @@ Adds natural-feeling camera shake using circular or random motion patterns.
 
 Great for action shots, handheld look, or simulating vibrations.
 
+</details>
+
 ---
 
-# 🎥 **5. VideoOverlayNode**
+<details>
+<summary>🎥 5. VideoOverlayNode</summary>
 
 Composite one video onto another
 Source: *comfy_video_overlay.py*
@@ -200,9 +207,12 @@ Alpha-blends a foreground video onto a background video.
 * Position + scale controls
 * Optional auto-fit
 
+</details>
+
 ---
 
-# 🎥 **6. ImageTransitionNode**
+<details>
+<summary>🎥 6. ImageTransitionNode</summary>
 
 Create smooth transition videos between two images
 Source: *comfy_image_transition.py*
@@ -240,9 +250,12 @@ Generates an MP4 video that transitions from one image to another using a mask-b
 
 The node creates a frame-by-frame animation where image2 is gradually revealed over image1 using a dynamic mask. If enabled, a colored line marks the current reveal position. Frames are encoded into an MP4 video using ffmpeg at 24 FPS.
 
+</details>
+
 ---
 
-# 🎥 **7. Simple Folder Video Combiner**
+<details>
+<summary>🎥 7. Simple Folder Video Combiner</summary>
 
 Simple concatenation of multiple video files from a directory
 Source: *comfy_simple_video_combiner.py*
@@ -293,9 +306,12 @@ Takes a directory path and concatenates all video files matching a pattern (e.g.
 * Merging rendered animation frames
 * Creating compilation videos from separate segments
 
+</details>
+
 ---
 
-# 🎥 **8. Advanced Folder Video Combiner**
+<details>
+<summary>🎥 8. Advanced Folder Video Combiner</summary>
 
 This script provides a **ComfyUI-compatible node** for automatically combining multiple video files from a directory into a single edited output.
 It offers robust handling of transitions, fades, audio overlays, randomization, and resolution normalization—all wrapped in an easy-to-use, configurable ComfyUI node.
@@ -434,9 +450,12 @@ Temporary files (WAV audio, concat lists) are deleted automatically.
 * Fades and transitions never exceed clip lengths; they are automatically clamped.
 * Color fade-ins and fade-outs use ffmpeg's `color` source generator.
 
+</details>
+
 ---
 
-# 🎥 **8. Video Splitter (ASS Subtitles)**
+<details>
+<summary>🎥 9. Video Splitter (ASS Subtitles)</summary>
 
 Split videos based on punctuation marks in ASS subtitle files
 Source: *comfy_video_splitter.py*
@@ -485,9 +504,12 @@ Automatically splits a video into segments based on punctuation marks (., !, ?) 
 * Cleans ASS formatting tags from subtitle text
 * Ensures no segments are shorter than the minimum duration by combining when necessary
 
+</details>
+
 ---
 
-# 🎥 **9. Camera Move (Video File)**
+<details>
+<summary>🎥 10. Camera Move (Video File)</summary>
 
 Apply camera movement effects to video files with audio preservation
 Source: *comfy_camera_move_video.py*
@@ -545,9 +567,12 @@ Supports the same movement options as the image Camera Move node:
 * Uses ffmpeg stream copying for lossless audio preservation
 * Works with any audio codec supported by the input video
 
+</details>
+
 ---
 
-# 🎥 **10. Camera Shake (Video File)**
+<details>
+<summary>🎥 11. Camera Shake (Video File)</summary>
 
 Apply camera shake effects to video files with audio preservation
 Source: *comfy_camera_shake_video.py*
@@ -610,9 +635,12 @@ Supports the same shake patterns as the image Camera Shake node:
 * Uses ffmpeg stream copying for lossless audio preservation
 * Works with any audio codec supported by the input video
 
+</details>
+
 ---
 
-# 🎥 **11. Zoom Sequence (Video File)**
+<details>
+<summary>🎥 12. Zoom Sequence (Video File)</summary>
 
 Apply zoom effects to video files with audio preservation
 Source: *comfy_zoom_sequence_video.py*
@@ -672,9 +700,12 @@ Takes a video file path and applies smooth zoom in/out effects with aspect corre
 * Uses ffmpeg stream copying for lossless audio preservation
 * Works with any audio codec supported by the input video
 
+</details>
+
 ---
 
-# 🎥 **12. Close Up (Face Centered)**
+<details>
+<summary>🎥 13. Close Up (Face Centered)</summary>
 
 Face-centered zoom using eye detection from SEGS data
 Source: *comfy_close_up.py*
@@ -759,9 +790,12 @@ The workflow uses:
 * Uses ffmpeg stream copying for lossless audio preservation
 * Works with any audio codec supported by the input video
 
+</details>
+
 ---
 
-# 🎥 **13. Close Up Image**
+<details>
+<summary>🎥 14. Close Up Image</summary>
 
 Image-based face-centered zoom using eye detection from SEGS data
 Source: *comfy_close_up_image.py*
@@ -823,9 +857,12 @@ Takes an image and SEGS segmentation data to detect eyes, calculates the center 
 - Outputs the selected zoom factor to the CLI for monitoring
 - Useful for creating variation in zoom levels across multiple images
 
+</details>
+
 ---
 
-# 🎥 **14. Video Loop Extender**
+<details>
+<summary>🎥 15. Video Loop Extender</summary>
 
 Duplicate and merge video files multiple times
 Source: *comfy_video_loop_extender.py*
@@ -875,9 +912,12 @@ Takes a video file path and extends it by duplicating and concatenating the vide
 * Uses ffmpeg stream concatenation to maintain audio synchronization
 * Works with any audio codec supported by the input video
 
+</details>
+
 ---
 
-# 🎥 **15. Image Sequence Overlay**
+<details>
+<summary>🎥 16. Image Sequence Overlay</summary>
 
 Apply animated overlays to image sequences with progress tracking
 Source: *comfy_image_sequence_overlay.py*
@@ -910,9 +950,12 @@ Applies PNG overlay animations from a folder to a sequence of images, with real-
 
 The node includes a LiteGraph progress bar widget that shows the completion percentage (0.0 to 1.0) during the overlay application process, providing visual feedback on long-running operations.
 
+</details>
+
 ---
 
-# 🎥 **16. Video Overlay (File Input)**
+<details>
+<summary>🎥 17. Video Overlay (File Input)</summary>
 
 Apply overlay animations from PNG folders to video files with audio preservation
 Source: *comfy_video_overlay_from_file.py*
@@ -984,6 +1027,8 @@ Uses properly constructed FFmpeg filter chains:
 * Uses ffmpeg stream copying for lossless audio preservation
 * Works with any audio codec supported by the input video
 * Audio duration matches video duration (uses video stream duration, not container duration)
+
+</details>
 
 ---
 
