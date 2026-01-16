@@ -6,7 +6,7 @@ All nodes operate on **batched IMAGE tensors (B, H, W, C)** and are designed for
 This bundle includes:
 
 <details>
-<summary>🎥 1. Zoom Sequence – per-batch zoom in/out with easing</summary>
+<summary>1. Zoom Sequence – per-batch zoom in/out with easing</summary>
 
 Single-batch smooth zoom-in/out with aspect-correct cropping
 Source: *comfy_zoom_sequence.py*  
@@ -46,10 +46,8 @@ before resizing back to original resolution.
 All cropping is done with **integer-accurate** bounds.
 </details>
 
----
-
 <details>
-<summary>🎥 2. Batched Zoom Sequence – persistent zoom across multiple batches</summary>
+<summary>2. Batched Zoom Sequence – persistent zoom across multiple batches</summary>
 
 Persistent zoom across multiple batches
 Source: *comfy_zoom_sequence_batched.py*  
@@ -91,7 +89,7 @@ State resets when the node reaches frame `source_frame_count - 1`.
 ---
 
 <details>
-<summary>🎥 3. Camera Move – pan/slide across the frame</summary>
+<summary>3. Camera Move – pan/slide across the frame</summary>
 
 Smooth pan / slide / 2D translation
 Source: *comfy_camera_move.py*
@@ -119,7 +117,7 @@ pan or tracking-shot effect.
 ---
 
 <details>
-<summary>🎥 4. Camera Shake – procedural handheld/chaotic motion</summary>
+<summary>4. Camera Shake – procedural handheld/chaotic motion</summary>
 
 Procedural handheld shake
 Source: *comfy_camera_shake.py*
@@ -143,7 +141,7 @@ Great for action shots, handheld look, or simulating vibrations.
 ---
 
 <details>
-<summary>🎥 5. Video Overlay – alpha-blend / composite one video over another</summary>
+<summary>5. Video Overlay – alpha-blend / composite one video over another</summary>
 
 Composite one video onto another
 Source: *comfy_video_overlay.py*
@@ -164,7 +162,7 @@ Alpha-blends a foreground video onto a background video.
 ---
 
 <details>
-<summary>🎥 6. Image Transition – create transition videos between two images</summary>
+<summary>6. Image Transition – create transition videos between two images</summary>
 
 Create smooth transition videos between two images
 Source: *comfy_image_transition.py*
@@ -207,7 +205,7 @@ The node creates a frame-by-frame animation where image2 is gradually revealed o
 ---
 
 <details>
-<summary>🎥 7. Simple Folder Video Combiner – concatenate multiple video files from a directory</summary>
+<summary>7. Simple Folder Video Combiner – concatenate multiple video files from a directory</summary>
 
 Simple concatenation of multiple video files from a directory
 Source: *comfy_simple_video_combiner.py*
@@ -263,7 +261,7 @@ Takes a directory path and concatenates all video files matching a pattern (e.g.
 ---
 
 <details>
-<summary>🎥 8. Advanced Folder Video Combiner – advanced video combining with transitions, fades, and audio</summary>
+<summary>8. Advanced Folder Video Combiner – advanced video combining with transitions, fades, and audio</summary>
 
 This script provides a **ComfyUI-compatible node** for automatically combining multiple video files from a directory into a single edited output.
 It offers robust handling of transitions, fades, audio overlays, randomization, and resolution normalization—all wrapped in an easy-to-use, configurable ComfyUI node.
@@ -407,7 +405,7 @@ Temporary files (WAV audio, concat lists) are deleted automatically.
 ---
 
 <details>
-<summary>🎥 9. Video Splitter (ASS Subtitles) – split videos based on subtitle punctuation</summary>
+<summary>9. Video Splitter (ASS Subtitles) – split videos based on subtitle punctuation</summary>
 
 Split videos based on punctuation marks in ASS subtitle files
 Source: *comfy_video_splitter.py*
@@ -461,7 +459,7 @@ Automatically splits a video into segments based on punctuation marks (., !, ?) 
 ---
 
 <details>
-<summary>🎥 10. Camera Move (Video File) – apply camera movement to video files with audio preservation</summary>
+<summary>10. Camera Move (Video File) – apply camera movement to video files with audio preservation</summary>
 
 Apply camera movement effects to video files with audio preservation
 Source: *comfy_camera_move_video.py*
@@ -524,7 +522,7 @@ Supports the same movement options as the image Camera Move node:
 ---
 
 <details>
-<summary>🎥 11. Camera Shake (Video File) – apply camera shake effects to video files with audio preservation</summary>
+<summary>11. Camera Shake (Video File) – apply camera shake effects to video files with audio preservation</summary>
 
 Apply camera shake effects to video files with audio preservation
 Source: *comfy_camera_shake_video.py*
@@ -592,7 +590,7 @@ Supports the same shake patterns as the image Camera Shake node:
 ---
 
 <details>
-<summary>🎥 12. Zoom Sequence (Video File) – apply zoom effects to video files with audio preservation</summary>
+<summary>12. Zoom Sequence (Video File) – apply zoom effects to video files with audio preservation</summary>
 
 Apply zoom effects to video files with audio preservation
 Source: *comfy_zoom_sequence_video.py*
@@ -657,7 +655,7 @@ Takes a video file path and applies smooth zoom in/out effects with aspect corre
 ---
 
 <details>
-<summary>🎥 13. Close Up (Face Centered) – face-centered zoom using eye detection from SEGS</summary>
+<summary>13. Close Up (Face Centered) – face-centered zoom using eye detection from SEGS</summary>
 
 Face-centered zoom using eye detection from SEGS data
 Source: *comfy_close_up.py*
@@ -747,7 +745,7 @@ The workflow uses:
 ---
 
 <details>
-<summary>🎥 14. Close Up Image – image-based face-centered zoom using eye detection from SEGS</summary>
+<summary>14. Close Up Image – image-based face-centered zoom using eye detection from SEGS</summary>
 
 Image-based face-centered zoom using eye detection from SEGS data
 Source: *comfy_close_up_image.py*
@@ -814,7 +812,7 @@ Takes an image and SEGS segmentation data to detect eyes, calculates the center 
 ---
 
 <details>
-<summary>🎥 15. Video Loop Extender – duplicate and merge video files multiple times</summary>
+<summary>15. Video Loop Extender – duplicate and merge video files multiple times</summary>
 
 Duplicate and merge video files multiple times
 Source: *comfy_video_loop_extender.py*
@@ -869,7 +867,7 @@ Takes a video file path and extends it by duplicating and concatenating the vide
 ---
 
 <details>
-<summary>🎥 16. Image Sequence Overlay – apply overlay animations to image sequences with progress indication</summary>
+<summary>16. Image Sequence Overlay – apply overlay animations to image sequences with progress indication</summary>
 
 Apply animated overlays to image sequences with progress tracking
 Source: *comfy_image_sequence_overlay.py*
@@ -907,7 +905,7 @@ The node includes a LiteGraph progress bar widget that shows the completion perc
 ---
 
 <details>
-<summary>🎥 17. Video Overlay (File Input) – apply overlay animations from PNG folders to video files with audio preservation</summary>
+<summary>17. Video Overlay (File Input) – apply overlay animations from PNG folders to video files with audio preservation</summary>
 
 Apply overlay animations from PNG folders to video files with audio preservation
 Source: *comfy_video_overlay_from_file.py*
