@@ -48,8 +48,6 @@ before resizing back to original resolution.
 All cropping is done with **integer-accurate** bounds.
 </details>
 
-<hr style="border: 0.1px solid gray;">
-
 <details>
 <summary>2. Batched Zoom Sequence ➜ Persistent zoom across multiple batches</summary>
 
