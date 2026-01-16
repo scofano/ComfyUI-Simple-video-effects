@@ -8,7 +8,7 @@ All nodes operate on **batched IMAGE tensors (B, H, W, C)** and are designed for
 This bundle includes:
 
 <details>
-<summary>1. Zoom Sequence – per-batch zoom in/out with easing</summary>
+<summary>1. Zoom Sequence ➜ per-batch zoom in/out with easing</summary>
 
 Single-batch smooth zoom-in/out with aspect-correct cropping
 Source: *comfy_zoom_sequence.py*  
