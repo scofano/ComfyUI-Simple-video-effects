@@ -1,7 +1,7 @@
 # pyproject.toml
 [project]
 name = "Simple-video-effects"  # Unique and immutable node identifier.
-description = "Many nodes for Video effects."
+description = "17 lightweight video manipulation nodes for ComfyUI including zoom, camera movement, overlays, and transitions."
 version = "1.1.0"  # Semantic versioning
 dependencies = []  # Populated from requirements.txt if present.
 
