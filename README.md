@@ -950,7 +950,6 @@ Uses properly constructed FFmpeg filter chains:
 
 </details>
 
----
 
 # 📦 **Installation**
 
@@ -968,7 +967,6 @@ pip install -r requirements.txt
 
 Restart ComfyUI.
 
----
 
 # 📁 **Workflow Examples**
 
@@ -979,7 +977,6 @@ The custom node includes example workflows in the `workflows/` folder:
 
 Import these JSON files into ComfyUI to see complete working examples of how to use the close up nodes with proper SEGS segmentation setup.
 
----
 
 # 🧪 **Troubleshooting**
 
@@ -1005,7 +1002,6 @@ Ensure:
 
 Make sure both videos have identical batch length or use a repeater.
 
----
 
 # 📄 **License**
 
