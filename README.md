@@ -86,8 +86,6 @@ The node tracks:
 State resets when the node reaches frame `source_frame_count - 1`.
 </details>
 
----
-
 <details>
 <summary>3. Camera Move – pan/slide across the frame</summary>
 
@@ -114,8 +112,6 @@ pan or tracking-shot effect.
 
 </details>
 
----
-
 <details>
 <summary>4. Camera Shake – procedural handheld/chaotic motion</summary>
 
@@ -138,8 +134,6 @@ Great for action shots, handheld look, or simulating vibrations.
 
 </details>
 
----
-
 <details>
 <summary>5. Video Overlay – alpha-blend / composite one video over another</summary>
 
@@ -158,8 +152,6 @@ Alpha-blends a foreground video onto a background video.
 * Optional auto-fit
 
 </details>
-
----
 
 <details>
 <summary>6. Image Transition – create transition videos between two images</summary>
@@ -201,8 +193,6 @@ Generates an MP4 video that transitions from one image to another using a mask-b
 The node creates a frame-by-frame animation where image2 is gradually revealed over image1 using a dynamic mask. If enabled, a colored line marks the current reveal position. Frames are encoded into an MP4 video using ffmpeg at 24 FPS.
 
 </details>
-
----
 
 <details>
 <summary>7. Simple Folder Video Combiner – concatenate multiple video files from a directory</summary>
@@ -257,8 +247,6 @@ Takes a directory path and concatenates all video files matching a pattern (e.g.
 * Creating compilation videos from separate segments
 
 </details>
-
----
 
 <details>
 <summary>8. Advanced Folder Video Combiner – advanced video combining with transitions, fades, and audio</summary>
@@ -402,8 +390,6 @@ Temporary files (WAV audio, concat lists) are deleted automatically.
 
 </details>
 
----
-
 <details>
 <summary>9. Video Splitter (ASS Subtitles) – split videos based on subtitle punctuation</summary>
 
@@ -455,8 +441,6 @@ Automatically splits a video into segments based on punctuation marks (., !, ?) 
 * Ensures no segments are shorter than the minimum duration by combining when necessary
 
 </details>
-
----
 
 <details>
 <summary>10. Camera Move (Video File) – apply camera movement to video files with audio preservation</summary>
@@ -518,8 +502,6 @@ Supports the same movement options as the image Camera Move node:
 * Works with any audio codec supported by the input video
 
 </details>
-
----
 
 <details>
 <summary>11. Camera Shake (Video File) – apply camera shake effects to video files with audio preservation</summary>
@@ -587,8 +569,6 @@ Supports the same shake patterns as the image Camera Shake node:
 
 </details>
 
----
-
 <details>
 <summary>12. Zoom Sequence (Video File) – apply zoom effects to video files with audio preservation</summary>
 
@@ -651,8 +631,6 @@ Takes a video file path and applies smooth zoom in/out effects with aspect corre
 * Works with any audio codec supported by the input video
 
 </details>
-
----
 
 <details>
 <summary>13. Close Up (Face Centered) – face-centered zoom using eye detection from SEGS</summary>
@@ -742,8 +720,6 @@ The workflow uses:
 
 </details>
 
----
-
 <details>
 <summary>14. Close Up Image – image-based face-centered zoom using eye detection from SEGS</summary>
 
@@ -809,8 +785,6 @@ Takes an image and SEGS segmentation data to detect eyes, calculates the center 
 
 </details>
 
----
-
 <details>
 <summary>15. Video Loop Extender – duplicate and merge video files multiple times</summary>
 
@@ -864,8 +838,6 @@ Takes a video file path and extends it by duplicating and concatenating the vide
 
 </details>
 
----
-
 <details>
 <summary>16. Image Sequence Overlay – apply overlay animations to image sequences with progress indication</summary>
 
@@ -901,8 +873,6 @@ Applies PNG overlay animations from a folder to a sequence of images, with real-
 The node includes a LiteGraph progress bar widget that shows the completion percentage (0.0 to 1.0) during the overlay application process, providing visual feedback on long-running operations.
 
 </details>
-
----
 
 <details>
 <summary>17. Video Overlay (File Input) – apply overlay animations from PNG folders to video files with audio preservation</summary>
