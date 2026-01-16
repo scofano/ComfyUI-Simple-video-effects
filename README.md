@@ -1,3 +1,5 @@
+![Header](header.jpg)
+
 # **ComfyUI Simple Video Effects**
 
 A collection of lightweight, production-ready **video manipulation nodes for ComfyUI**.
