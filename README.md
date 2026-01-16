@@ -978,33 +978,3 @@ The custom node includes example workflows in the `workflows/` folder:
 * **close_up_video.json** – Example workflow demonstrating the Close Up (Face Centered) video node for face-centered zoom on video files
 
 Import these JSON files into ComfyUI to see complete working examples of how to use the close up nodes with proper SEGS segmentation setup.
-
-
-# 🧪 **Troubleshooting**
-
-### **“Clamped margin” warnings**
-
-Zoom margin exceeded safe limit; node automatically prevents invalid cropping.
-
-### **Zoom looks too slow**
-
-Increase `pixels_per_frame`.
-
-### **Zoom resets unexpectedly**
-
-Ensure:
-
-* Same canvas size
-* Same parameters
-* Same `source_frame_count`
-* Same mode & ease
-  between batches.
-
-### **Overlay misaligned**
-
-Make sure both videos have identical batch length or use a repeater.
-
-
-# 📄 **License**
-
-MIT
