@@ -68,6 +68,30 @@ class ComfySimpleVideoCombiner:
             print(f"Using fallback output directory: {fallback_dir}")
             return fallback_dir
 
+    def _get_video_duration(self, video_path: str) -> float:
+        try:
+            probe = ffmpeg.probe(video_path)
+        except ffmpeg.Error as e:
+            msg = e.stderr.decode() if getattr(e, "stderr", None) else str(e)
+            raise RuntimeError(f"Failed to probe video '{video_path}': {msg}")
+        except Exception as e:
+            raise RuntimeError(f"Failed to probe video '{video_path}': {str(e)}")
+
+        fmt = probe.get("format", {})
+        if "duration" not in fmt:
+            raise RuntimeError(
+                f"Could not determine duration for video '{video_path}' "
+                f"(no 'duration' in ffprobe output)."
+            )
+
+        try:
+            return float(fmt["duration"])
+        except Exception as e:
+            raise RuntimeError(
+                f"Invalid duration value for video '{video_path}': "
+                f"{fmt['duration']} ({e})"
+            )
+
     def get_unique_filename(self, output_path: str) -> str:
         base, ext = os.path.splitext(output_path)
         index = 1
@@ -105,42 +129,40 @@ class ComfySimpleVideoCombiner:
         output_path = os.path.join(self.output_dir, output_filename)
         output_path = self.get_unique_filename(output_path)
 
-        # Create concat file list
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".txt", delete=False
-        ) as f:
-            for video_file in video_files:
-                path_str = str(video_file.absolute()).replace("'", r"'\''")
-                f.write(f"file '{path_str}'\n")
-            temp_list_path = f.name
-
         try:
-            # Simple concat
-            stream = ffmpeg.input(temp_list_path, f="concat", safe=0)
+            # Create inputs for each video file
+            inputs = [ffmpeg.input(str(video_file)) for video_file in video_files]
+
+            v_streams = [i.video for i in inputs]
+            a_streams = [i.audio for i in inputs]
+
+            # Normalize audio (to avoid breaking due to 24000/mono vs 44100/stereo)
+            a_streams = [
+                a.filter("aresample", 44100)
+                 .filter("aformat", sample_fmts="fltp", channel_layouts="stereo")
+                for a in a_streams
+            ]
+
+            # IMPORTANT: interleave v/a per clip
+            streams = []
+            for v, a in zip(v_streams, a_streams):
+                streams.extend([v, a])
+
+            out_nodes = ffmpeg.concat(*streams, v=1, a=1).node
+            v_out, a_out = out_nodes[0], out_nodes[1]
 
             if use_gpu:
-                stream = ffmpeg.output(
-                    stream, output_path, vcodec="h264_nvenc"
-                )
+                out = ffmpeg.output(v_out, a_out, output_path, vcodec="h264_nvenc", acodec="aac")
             else:
-                stream = ffmpeg.output(stream, output_path)
+                out = ffmpeg.output(v_out, a_out, output_path, vcodec="libx264", acodec="aac")
 
-            stream = stream.overwrite_output()
-            print("Rendering video...")
-            stream.run(quiet=True)
-            print("Rendering finished.")
+            out = out.overwrite_output()
+            out.run(quiet=True)
 
         except ffmpeg.Error as e:
             if getattr(e, "stderr", None) is not None:
                 raise RuntimeError(f"FFmpeg error: {e.stderr.decode()}")
             else:
                 raise RuntimeError(f"FFmpeg error: {str(e)}")
-
-        finally:
-            if temp_list_path and os.path.exists(temp_list_path):
-                try:
-                    os.remove(temp_list_path)
-                except Exception:
-                    pass
 
         return (output_path,)
