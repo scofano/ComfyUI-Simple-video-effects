@@ -18,6 +18,7 @@ from .comfy_close_up_image import CloseUpImageNode
 from .comfy_video_loop_extender import VideoLoopExtenderNode
 from .comfy_image_sequence_overlay import ImageSequenceOverlay
 from .comfy_video_overlay_from_file import VideoOverlayFromFile
+from .comfy_add_soundtrack import ComfyAddSoundtrack
 
 
 NODE_CLASS_MAPPINGS = {
@@ -41,6 +42,7 @@ NODE_CLASS_MAPPINGS = {
     "VideoLoopExtenderNode": VideoLoopExtenderNode,
     "ImageSequenceOverlay": ImageSequenceOverlay,
     "VideoOverlayFromFile": VideoOverlayFromFile,
+    "ComfyAddSoundtrack": ComfyAddSoundtrack,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -64,6 +66,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "VideoLoopExtenderNode": "Video Loop Extender",
     "ImageSequenceOverlay": "Image Sequence Overlay",
     "VideoOverlayFromFile": "Video Overlay (File Input)",
+    "ComfyAddSoundtrack": "Add Soundtrack",
 }
 
 __all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS"]

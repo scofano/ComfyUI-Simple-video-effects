@@ -952,6 +952,66 @@ Uses properly constructed FFmpeg filter chains:
 
 </details>
 
+<details>
+<summary>18. Add Soundtrack ➜ Mix soundtrack audio with video while preserving original audio.</summary>
+
+Mix a soundtrack with video audio while preserving original audio
+Source: *comfy_add_soundtrack.py*
+
+### **What it does**
+
+Takes a video file and an audio file, applies volume adjustment only to the soundtrack, trims the soundtrack to match video duration, mixes it with the video's original audio, and outputs a new video file with the same duration.
+
+### **Key Features**
+
+* Preserves the video's original audio unchanged
+* Applies volume adjustment only to the added soundtrack
+* Automatically trims soundtrack to match video duration
+* Supports very low volume levels (down to -100 dB)
+* Optional deletion of the original video file after processing
+* Automatic output filename generation with incrementing numbers
+* Progress indication during processing
+
+### **Inputs**
+
+| Name                | Type    | Description                                      |
+| --------------------| ------- | ------------------------------------------------ |
+| `video_path`        | STRING  | Full path to the input video file                |
+| `audio_path`        | STRING  | Full path to the soundtrack audio file           |
+| `volume_db`         | FLOAT   | Soundtrack volume adjustment in dB (default: -20.0, min: -100.0) |
+| `delete_original`   | BOOLEAN | Delete original video file after processing (default: False) |
+| `output_path`       | STRING  | Optional custom output path (default: auto-generated) |
+
+### **Outputs**
+
+* `output_video_path` – Full path to the processed video file with mixed audio
+
+### **How it works**
+
+1. Validates input video and audio files exist
+2. Probes video duration using ffprobe
+3. Trims the soundtrack audio to match video duration
+4. Applies volume adjustment to the soundtrack using ffmpeg volume filter
+5. Mixes the adjusted soundtrack with the video's original audio using amix filter
+6. Re-encodes the video with mixed audio streams
+7. Optionally deletes the original video file if toggled
+8. Saves the output to ComfyUI's default output directory with unique filename
+
+### **Audio Processing**
+
+* Uses ffmpeg's `atrim` filter to trim soundtrack to exact video duration
+* Applies volume adjustment with `volume` filter (supports negative dB values down to -100)
+* Mixes audio streams using `amix` filter with longest duration and no dropout transition
+* Preserves all original video audio characteristics
+
+### **Filename Generation**
+
+* Auto-generates names like `original_name_with_soundtrack.mp4`
+* Adds incrementing numbers to avoid overwriting existing files
+* Uses ComfyUI's default output directory structure
+
+</details>
+
 
 # 📦 **Installation**
 

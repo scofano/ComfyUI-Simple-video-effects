@@ -31,6 +31,12 @@ class ComfySimpleVideoCombiner:
                     "multiline": False,
                     "placeholder": "*.mp4"
                 }),
+                "cross_fade": ("FLOAT", {
+                    "default": 0.5,
+                    "min": 0.0,
+                    "step": 0.1,
+                    "label": "Cross fade duration (seconds) - 0 for no fade"
+                }),
                 "use_gpu": ("BOOLEAN", {
                     "default": True,
                     "label": "Use GPU (NVENC encoder)"
@@ -108,6 +114,7 @@ class ComfySimpleVideoCombiner:
         directory_path: str,
         output_filename: str,
         file_pattern: str,
+        cross_fade: float = 0.5,
         use_gpu: bool = True,
     ) -> tuple:
 
@@ -126,6 +133,8 @@ class ComfySimpleVideoCombiner:
         if not output_filename.lower().endswith(".mp4"):
             output_filename += ".mp4"
 
+        durations = [self._get_video_duration(str(v)) for v in video_files]
+
         output_path = os.path.join(self.output_dir, output_filename)
         output_path = self.get_unique_filename(output_path)
 
@@ -143,13 +152,24 @@ class ComfySimpleVideoCombiner:
                 for a in a_streams
             ]
 
-            # IMPORTANT: interleave v/a per clip
-            streams = []
-            for v, a in zip(v_streams, a_streams):
-                streams.extend([v, a])
+            if cross_fade == 0:
+                # IMPORTANT: interleave v/a per clip
+                streams = []
+                for v, a in zip(v_streams, a_streams):
+                    streams.extend([v, a])
 
-            out_nodes = ffmpeg.concat(*streams, v=1, a=1).node
-            v_out, a_out = out_nodes[0], out_nodes[1]
+                out_nodes = ffmpeg.concat(*streams, v=1, a=1).node
+                v_out, a_out = out_nodes[0], out_nodes[1]
+            else:
+                combined_v = v_streams[0]
+                combined_a = a_streams[0]
+                total_duration = durations[0]
+                for i in range(1, len(v_streams)):
+                    offset = total_duration - cross_fade
+                    combined_v = ffmpeg.filter([combined_v, v_streams[i]], 'xfade', transition='fade', duration=cross_fade, offset=offset)
+                    combined_a = ffmpeg.filter([combined_a, a_streams[i]], 'acrossfade', duration=cross_fade)
+                    total_duration += durations[i] - cross_fade
+                v_out, a_out = combined_v, combined_a
 
             if use_gpu:
                 out = ffmpeg.output(v_out, a_out, output_path, vcodec="h264_nvenc", acodec="aac")
