@@ -1012,6 +1012,73 @@ Takes a video file and an audio file, applies volume adjustment only to the soun
 
 </details>
 
+<details>
+<summary>19. Image Audio CSV Generator ➜ Generate CSV files pairing image and audio files.</summary>
+
+Generate CSV files pairing image and audio files from separate directories
+Source: *comfy_image_audio_csv.py*
+
+### **What it does**
+
+Scans two directories (one for images, one for audio), sorts all files alphabetically, pairs them using zip(), and saves the pairings to a CSV file with semicolon delimiters.
+
+### **Key Features**
+
+* Scans separate directories for image and audio files
+* Supports common image formats (PNG, JPG, JPEG, BMP, GIF, TIFF, WebP)
+* Supports common audio formats (MP3, WAV, OGG, FLAC, AAC, M4A, WMA)
+* Sorts files alphabetically in ascending order
+* Pairs images with audios using Python's zip() function
+* Uses semicolon (;) as CSV delimiter
+* Validates directory existence and creates output directories automatically
+* UTF-8 encoding for international character support
+
+### **Inputs**
+
+| Name                  | Type   | Description                                      |
+| --------------------- | ------ | ------------------------------------------------ |
+| `image_directory_path`| STRING | Full path to directory containing image files    |
+| `audio_directory_path`| STRING | Full path to directory containing audio files    |
+| `output_csv_path`     | STRING | Full path for output CSV file (e.g., C:/output/data.csv) |
+
+### **Outputs**
+
+* `csv_path` – Full path to the generated CSV file
+
+### **How it works**
+
+1. Validates that both input directories exist
+2. Scans image directory for supported image file extensions
+3. Scans audio directory for supported audio file extensions
+4. Sorts both lists alphabetically in ascending order
+5. Pairs images with audios using zip() (stops at shorter list)
+6. Creates output directory if it doesn't exist
+7. Writes CSV with semicolon delimiter and UTF-8 encoding
+8. Each row contains: image_full_path;audio_full_path
+
+### **CSV Format**
+
+The output CSV uses semicolon delimiters and contains one pair per line:
+```
+C:\images\image1.jpg;C:\audio\audio1.mp3
+C:\images\image2.png;C:\audio\audio2.wav
+C:\images\image3.jpeg;C:\audio\audio3.flac
+```
+
+### **File Extensions Supported**
+
+**Images:** .png, .jpg, .jpeg, .bmp, .gif, .tiff, .tif, .webp
+**Audio:** .mp3, .wav, .ogg, .flac, .aac, .m4a, .wma
+
+### **Use Cases**
+
+* Creating datasets for machine learning projects
+* Organizing media files for batch processing
+* Generating playlists with visual-audio pairings
+* Automated file organization and cataloging
+
+</details>
+
 
 # 📦 **Installation**
 
