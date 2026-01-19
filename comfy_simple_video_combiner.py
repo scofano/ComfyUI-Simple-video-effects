@@ -9,6 +9,7 @@ class ComfySimpleVideoCombiner:
     A simple ComfyUI-compatible node that:
     - Scans a directory for video files matching a pattern (e.g. *.mp4)
     - Concatenates them in sorted order
+    - Supports recursive processing of subdirectories (creates separate videos per folder)
     - Optionally uses GPU-accelerated encoding (NVENC) when available
     """
 
@@ -40,6 +41,10 @@ class ComfySimpleVideoCombiner:
                 "use_gpu": ("BOOLEAN", {
                     "default": True,
                     "label": "Use GPU (NVENC encoder)"
+                }),
+                "recursive": ("BOOLEAN", {
+                    "default": False,
+                    "label": "Process subdirectories recursively (creates separate videos per folder)"
                 }),
             }
         }
@@ -109,29 +114,21 @@ class ComfySimpleVideoCombiner:
 
         return unique_path
 
-    def combine_videos(
+    def _combine_videos_in_directory(
         self,
-        directory_path: str,
+        directory: Path,
         output_filename: str,
         file_pattern: str,
-        cross_fade: float = 0.5,
-        use_gpu: bool = True,
-    ) -> tuple:
-
-        directory = Path(directory_path).expanduser().resolve()
-        if not directory.is_dir():
-            raise ValueError(f"Directory does not exist: {directory}")
-
+        cross_fade: float,
+        use_gpu: bool,
+    ) -> str:
+        """Helper method to combine videos in a single directory."""
         video_files = sorted(directory.glob(file_pattern))
         if not video_files:
             raise ValueError(
                 f"No video files found in directory '{directory}' "
                 f"matching pattern '{file_pattern}'"
             )
-
-        output_filename = output_filename.strip() or "combined_output.mp4"
-        if not output_filename.lower().endswith(".mp4"):
-            output_filename += ".mp4"
 
         durations = [self._get_video_duration(str(v)) for v in video_files]
 
@@ -185,4 +182,63 @@ class ComfySimpleVideoCombiner:
             else:
                 raise RuntimeError(f"FFmpeg error: {str(e)}")
 
-        return (output_path,)
+        return output_path
+
+    def combine_videos(
+        self,
+        directory_path: str,
+        output_filename: str,
+        file_pattern: str,
+        cross_fade: float = 0.5,
+        use_gpu: bool = True,
+        recursive: bool = False,
+    ) -> tuple:
+
+        directory = Path(directory_path).expanduser().resolve()
+        if not directory.is_dir():
+            raise ValueError(f"Directory does not exist: {directory}")
+
+        if recursive:
+            # Find all subdirectories
+            subdirs = [d for d in directory.iterdir() if d.is_dir()]
+            if not subdirs:
+                raise ValueError(f"No subdirectories found in '{directory}' for recursive processing")
+
+            output_paths = []
+            for subdir in sorted(subdirs):
+                # Generate output filename based on subdirectory name
+                subdir_name = subdir.name
+                base_name = output_filename.strip() or "combined_output.mp4"
+                if not base_name.lower().endswith(".mp4"):
+                    base_name += ".mp4"
+
+                # Insert subdirectory name before extension
+                name_without_ext = os.path.splitext(base_name)[0]
+                ext = os.path.splitext(base_name)[1]
+                subdir_output_filename = f"{name_without_ext}_{subdir_name}{ext}"
+
+                try:
+                    output_path = self._combine_videos_in_directory(
+                        subdir, subdir_output_filename, file_pattern, cross_fade, use_gpu
+                    )
+                    output_paths.append(output_path)
+                    print(f"Processed subdirectory '{subdir_name}': {output_path}")
+                except ValueError as e:
+                    print(f"Skipping subdirectory '{subdir_name}': {str(e)}")
+                    continue
+
+            if not output_paths:
+                raise ValueError(f"No subdirectories contained valid video files matching pattern '{file_pattern}'")
+
+            # Return newline-separated list of output paths
+            return ("\n".join(output_paths),)
+        else:
+            # Non-recursive mode - process the single directory as before
+            output_filename = output_filename.strip() or "combined_output.mp4"
+            if not output_filename.lower().endswith(".mp4"):
+                output_filename += ".mp4"
+
+            output_path = self._combine_videos_in_directory(
+                directory, output_filename, file_pattern, cross_fade, use_gpu
+            )
+            return (output_path,)

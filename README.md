@@ -222,19 +222,28 @@ Takes a directory path and concatenates all video files matching a pattern (e.g.
 | `output_filename`  | STRING  | Name for output file (default: "combined_output.mp4") |
 | `file_pattern`     | STRING  | Glob pattern for matching files (default: "*.mp4") |
 | `use_gpu`          | BOOLEAN | Enable GPU encoding (NVENC) (default: True)      |
+| `recursive`        | BOOLEAN | Process subdirectories recursively (creates separate videos per folder) |
 
 ### **Outputs**
 
-* `output_path` – Full path to the concatenated video file
+* `output_path` – Full path(s) to the concatenated video file(s) (newline-separated when recursive)
 
 ### **How it works**
 
+**Non-recursive mode (default):**
 1. Scans the specified directory for files matching the pattern
 2. Sorts files alphabetically
 3. Creates a temporary concat file list for ffmpeg
 4. Uses ffmpeg's concat demuxer to join videos efficiently
 5. Encodes output with H.264 (optionally with NVENC GPU acceleration)
 6. Cleans up temporary files automatically
+
+**Recursive mode:**
+1. Scans the specified directory for subdirectories
+2. For each subdirectory found, processes it like non-recursive mode
+3. Generates unique output filenames based on subdirectory names
+4. Returns a newline-separated string containing all output file paths
+5. Skips subdirectories that contain no valid video files (with console warning)
 
 ### **Performance**
 
