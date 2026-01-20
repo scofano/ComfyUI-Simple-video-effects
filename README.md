@@ -1091,7 +1091,7 @@ C:\images\image3.jpeg;C:\audio\audio3.flac
 
 # 📦 **Installation**
 
-Place all `.py` files into:
+Place the `__init__.py` file and the `scripts/` folder into:
 
 ```
 ComfyUI/custom_nodes/ComfyUI_SimpleVideoEffects/

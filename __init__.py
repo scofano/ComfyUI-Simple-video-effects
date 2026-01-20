@@ -1,25 +1,25 @@
-from .comfy_zoom_sequence import ZoomSequenceNode as ZoomSequenceNodeSingle
-from .batch_comfy_zoom_sequence import ZoomSequenceNode as ZoomSequenceNodeBatch
-from .comfy_camera_shake import CameraShakeNode
-from .comfy_video_overlay import VideoOverlay
-from .comfy_camera_move import CameraMoveNode
-from .comfy_video_combiner import ComfyVideoCombiner
-from .comfy_simple_video_combiner import ComfySimpleVideoCombiner
-from .comfy_video_image_overlay import VideoImageOverlay
-from .comfy_video_overlay_batch import VideoOverlayBatch
-from .comfy_audio_video_merger import MergeVideoAudioNode
-from .comfy_image_transition import ImageTransitionNode
-from .comfy_video_splitter import VideoSplitterNode
-from .comfy_camera_move_video import CameraMoveVideoNode
-from .comfy_camera_shake_video import CameraShakeVideoNode
-from .comfy_zoom_sequence_video import ZoomSequenceVideoNode
-from .comfy_close_up import CloseUpNode
-from .comfy_close_up_image import CloseUpImageNode
-from .comfy_video_loop_extender import VideoLoopExtenderNode
-from .comfy_image_sequence_overlay import ImageSequenceOverlay
-from .comfy_video_overlay_from_file import VideoOverlayFromFile
-from .comfy_add_soundtrack import ComfyAddSoundtrack
-from .comfy_image_audio_csv import ComfyImageAudioCSV
+from .scripts.comfy_zoom_sequence import ZoomSequenceNode as ZoomSequenceNodeSingle
+from .scripts.batch_comfy_zoom_sequence import ZoomSequenceNode as ZoomSequenceNodeBatch
+from .scripts.comfy_camera_shake import CameraShakeNode
+from .scripts.comfy_video_overlay import VideoOverlay
+from .scripts.comfy_camera_move import CameraMoveNode
+from .scripts.comfy_video_combiner import ComfyVideoCombiner
+from .scripts.comfy_simple_video_combiner import ComfySimpleVideoCombiner
+from .scripts.comfy_video_image_overlay import VideoImageOverlay
+from .scripts.comfy_video_overlay_batch import VideoOverlayBatch
+from .scripts.comfy_audio_video_merger import MergeVideoAudioNode
+from .scripts.comfy_image_transition import ImageTransitionNode
+from .scripts.comfy_video_splitter import VideoSplitterNode
+from .scripts.comfy_camera_move_video import CameraMoveVideoNode
+from .scripts.comfy_camera_shake_video import CameraShakeVideoNode
+from .scripts.comfy_zoom_sequence_video import ZoomSequenceVideoNode
+from .scripts.comfy_close_up import CloseUpNode
+from .scripts.comfy_close_up_image import CloseUpImageNode
+from .scripts.comfy_video_loop_extender import VideoLoopExtenderNode
+from .scripts.comfy_image_sequence_overlay import ImageSequenceOverlay
+from .scripts.comfy_video_overlay_from_file import VideoOverlayFromFile
+from .scripts.comfy_add_soundtrack import ComfyAddSoundtrack
+from .scripts.comfy_image_audio_csv import ComfyImageAudioCSV
 
 
 NODE_CLASS_MAPPINGS = {
