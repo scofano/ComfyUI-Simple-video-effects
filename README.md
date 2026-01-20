@@ -8,7 +8,7 @@ All nodes operate on **batched IMAGE tensors (B, H, W, C)** and are designed for
 This bundle includes:
 
 <details>
-<summary>1. Zoom Sequence ➜ Per-batch zoom in/out with easing.</summary>
+<summary>01. Zoom Sequence ➜ Per-batch zoom in/out with easing.</summary>
 
 Single-batch smooth zoom-in/out with aspect-correct cropping
 Source: *comfy_zoom_sequence.py*  
@@ -49,7 +49,7 @@ All cropping is done with **integer-accurate** bounds.
 </details>
 
 <details>
-<summary>2. Batched Zoom Sequence ➜ Persistent zoom across multiple batches.</summary>
+<summary>02. Batched Zoom Sequence ➜ Persistent zoom across multiple batches.</summary>
 
 Persistent zoom across multiple batches
 Source: *comfy_zoom_sequence_batched.py*  
@@ -89,7 +89,7 @@ State resets when the node reaches frame `source_frame_count - 1`.
 </details>
 
 <details>
-<summary>3. Camera Move ➜ Pan/slide across the frame.</summary>
+<summary>03. Camera Move ➜ Pan/slide across the frame.</summary>
 
 Smooth pan / slide / 2D translation
 Source: *comfy_camera_move.py*
@@ -115,7 +115,7 @@ pan or tracking-shot effect.
 </details>
 
 <details>
-<summary>4. Camera Shake ➜ Procedural handheld/chaotic motion.</summary>
+<summary>04. Camera Shake ➜ Procedural handheld/chaotic motion.</summary>
 
 Procedural handheld shake
 Source: *comfy_camera_shake.py*
@@ -137,7 +137,7 @@ Great for action shots, handheld look, or simulating vibrations.
 </details>
 
 <details>
-<summary>5. Video Overlay ➜ Alpha-blend / composite one video over another.</summary>
+<summary>05. Video Overlay ➜ Alpha-blend / composite one video over another.</summary>
 
 Composite one video onto another
 Source: *comfy_video_overlay.py*
@@ -156,7 +156,7 @@ Alpha-blends a foreground video onto a background video.
 </details>
 
 <details>
-<summary>6. Image Transition ➜ Create transition videos between two images.</summary>
+<summary>06. Image Transition ➜ Create transition videos between two images.</summary>
 
 Create smooth transition videos between two images
 Source: *comfy_image_transition.py*
@@ -197,7 +197,7 @@ The node creates a frame-by-frame animation where image2 is gradually revealed o
 </details>
 
 <details>
-<summary>7. Simple Folder Video Combiner ➜ Concatenate multiple video files from a directory.</summary>
+<summary>07. Simple Folder Video Combiner ➜ Concatenate multiple video files from a directory.</summary>
 
 Simple concatenation of multiple video files from a directory
 Source: *comfy_simple_video_combiner.py*
@@ -260,7 +260,7 @@ Takes a directory path and concatenates all video files matching a pattern (e.g.
 </details>
 
 <details>
-<summary>8. Advanced Folder Video Combiner ➜ Advanced video combining with transitions, fades, and audio.</summary>
+<summary>08. Advanced Folder Video Combiner ➜ Advanced video combining with transitions, fades, and audio.</summary>
 
 This script provides a **ComfyUI-compatible node** for automatically combining multiple video files from a directory into a single edited output.
 It offers robust handling of transitions, fades, audio overlays, randomization, and resolution normalization—all wrapped in an easy-to-use, configurable ComfyUI node.
@@ -402,7 +402,7 @@ Temporary files (WAV audio, concat lists) are deleted automatically.
 </details>
 
 <details>
-<summary>9. Video Splitter (ASS Subtitles) ➜ Split videos based on subtitle punctuation.</summary>
+<summary>09. Video Splitter (ASS Subtitles) ➜ Split videos based on subtitle punctuation.</summary>
 
 Split videos based on punctuation marks in ASS subtitle files
 Source: *comfy_video_splitter.py*
