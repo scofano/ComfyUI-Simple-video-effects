@@ -241,4 +241,5 @@ class ComfySimpleVideoCombiner:
             output_path = self._combine_videos_in_directory(
                 directory, output_filename, file_pattern, cross_fade, use_gpu
             )
+            self.__class__.RETURN_TYPES = ("STRING",)
             return (output_path,)

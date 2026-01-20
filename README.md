@@ -226,7 +226,7 @@ Takes a directory path and concatenates all video files matching a pattern (e.g.
 
 ### **Outputs**
 
-* `output_path` – Full path(s) to the concatenated video file(s) (newline-separated when recursive)
+* `output_path` – Full path to the concatenated video file (non-recursive) or newline-separated list of output paths (recursive mode, one per line)
 
 ### **How it works**
 
