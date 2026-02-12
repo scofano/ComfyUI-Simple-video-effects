@@ -3,7 +3,6 @@ import subprocess
 from typing import Tuple
 
 import comfy.utils
-import folder_paths
 
 
 class VideoImageOverlay:
@@ -13,7 +12,7 @@ class VideoImageOverlay:
     - Applies a PNG image (with optional alpha) as an overlay over a full video
       using ffmpeg.
     - Removes all functionality related to resizing the overlay image.
-    - Saves the result as an MP4 in the ComfyUI output directory.
+    - Saves the result as an MP4 in the same directory as the input video.
     - Returns the full path to the generated video as a STRING.
     """
 
@@ -79,8 +78,9 @@ class VideoImageOverlay:
             raise FileNotFoundError(f"Video file not found: {video_path}")
 
     def _build_output_path(self, video_path: str, suffix: str) -> str:
-        """Build the output .mp4 path in ComfyUI's output directory, avoiding overwrites."""
-        output_dir = folder_paths.get_output_directory()
+        """Build the output .mp4 path in the same directory as the input video, avoiding overwrites."""
+        # Use the same directory as the input video
+        output_dir = os.path.dirname(video_path)
 
         # Use the input path (normalized) for naming
         base_name = os.path.basename(video_path)

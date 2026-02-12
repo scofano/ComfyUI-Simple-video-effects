@@ -1022,7 +1022,54 @@ Takes a video file and an audio file, applies volume adjustment only to the soun
 </details>
 
 <details>
-<summary>19. Image Audio CSV Generator ➜ Generate CSV files pairing image and audio files.</summary>
+<summary>19. Video Image Overlay ➜ Overlay PNG images onto video files with alpha transparency.</summary>
+
+Overlay a PNG image onto a video file using ffmpeg
+Source: *comfy_video_image_overlay.py*
+
+### **What it does**
+
+Applies a PNG image (with optional alpha channel) as an overlay onto a full video file using ffmpeg. The output video is saved in the same directory as the input video.
+
+### **Key Features**
+
+* Supports PNG images with alpha transparency
+* No resizing - overlay is applied at original size
+* Output saved to the same directory as the input video
+* Optional suffix for output filename customization
+* Optional deletion of the original video file after processing
+
+### **Inputs**
+
+| Name                 | Type    | Description                                      |
+| -------------------- | ------- | ------------------------------------------------ |
+| `overlay_image_path` | STRING  | Full path to the overlay PNG image               |
+| `video_path`         | STRING  | Full path to the input video file                |
+| `suffix`             | STRING  | Suffix for output filename (default: "_overlay") |
+| `delete_original`    | BOOLEAN | Delete original video after processing           |
+
+### **Outputs**
+
+* `output_video_path` – Full path to the processed video file
+
+### **How it works**
+
+1. Validates that both the overlay image and video file exist
+2. Uses ffmpeg to overlay the PNG onto the video at position (0, 0)
+3. The output video is saved in the same directory as the input video
+4. If the output filename already exists, appends _0001, _0002, etc. to avoid overwrites
+5. Optionally deletes the original video file if `delete_original` is enabled
+
+### **Filename Generation**
+
+* Output is saved in the same directory as the input video
+* Example: `C:\videos\myvideo.mp4` → `C:\videos\myvideo_overlay.mp4`
+* If file exists: `myvideo_overlay.mp4` → `myvideo_overlay_0001.mp4`
+
+</details>
+
+<details>
+<summary>20. Image Audio CSV Generator ➜ Generate CSV files pairing image and audio files.</summary>
 
 Generate CSV files pairing image and audio files from separate directories
 Source: *comfy_image_audio_csv.py*
