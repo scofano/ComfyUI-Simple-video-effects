@@ -48,8 +48,8 @@ NODE_CLASS_MAPPINGS = {
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "ZoomSequenceNode": "Zoom (In/Out, Easing)",
-    "ZoomSequenceBatchNode": "Batch Zoom (In/Out, Easing)",
+    "ZoomSequenceNode": "Zoom (Direction + Amount Type)",
+    "ZoomSequenceBatchNode": "Batch Zoom (Direction + Amount Type)",
     "CameraShakeNode": "Camera Shake",
     "VideoOverlay": "Video Overlay",
     "CameraMoveNode": "Camera Move",
@@ -62,7 +62,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "VideoSplitterNode": "Video Splitter (ASS Subtitles)",
     "CameraMoveVideoNode": "Camera Move (Video File)",
     "CameraShakeVideoNode": "Camera Shake (Video File)",
-    "ZoomSequenceVideoNode": "Zoom Sequence (Video File)",
+    "ZoomSequenceVideoNode": "Zoom Sequence (Video File, Direction + Amount Type)",
     "CloseUpNode": "Video - Close Up (Face Centered)",
     "CloseUpImageNode": "Image - Close Up (Face Centered)",
     "VideoLoopExtenderNode": "Video Loop Extender",

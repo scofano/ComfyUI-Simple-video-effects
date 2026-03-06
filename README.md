@@ -8,7 +8,7 @@ All nodes operate on **batched IMAGE tensors (B, H, W, C)** and are designed for
 This bundle includes:
 
 <details>
-<summary>01. Zoom Sequence ➜ Per-batch zoom in/out with easing.</summary>
+<summary>01. Zoom Sequence ➜ Single-batch zoom in/out with easing.</summary>
 
 Single-batch smooth zoom-in/out with aspect-correct cropping
 Source: *comfy_zoom_sequence.py*  
@@ -20,9 +20,9 @@ while **maintaining the original canvas size and aspect ratio**.
 
 ### **Key Features**
 
-* Zoom **in** or **out** across the batch
-* **Progressive zoom per frame**
-* Choose from: Linear, Ease-In, Ease-Out, Ease-In-Out
+* Zoom direction: **in**, **out**, or **random**
+* Amount type: **Pixels per Frame** or **Target Percentage**
+* Choose from: Linear, Ease-In, Ease-Out, Ease-In-Out, Random
 * Automatic **aspect-correct cropping**
 * Prevents over-zooming using safe margin clamp
 
@@ -31,9 +31,13 @@ while **maintaining the original canvas size and aspect ratio**.
 | Name               | Type                                      | Description                                   |
 | ------------------ | ----------------------------------------- | --------------------------------------------- |
 | `images`           | IMAGE                                     | Batched frames                                |
-| `mode`             | Zoom In / Zoom Out                        |                                               |
-| `pixels_per_frame` | FLOAT                                     | Zoom speed, based on smaller canvas dimension |
-| `ease`             | Linear / Ease_In / Ease_Out / Ease_In_Out |                                               |
+| `direction`        | Zoom In / Zoom Out / Random               | Zoom direction                                |
+| `amount_type`      | Pixels per Frame / Target Percentage      | Select pixel-speed mode or timeline percentage mode |
+| `pixels_per_frame` | FLOAT                                     | Used when `amount_type = Pixels per Frame`    |
+| `zoom_percentage`  | INT                                       | Used when `amount_type = Target Percentage` (default 110 = 110%) |
+| `ease`             | Linear / Ease_In / Ease_Out / Ease_In_Out / Random |                                         |
+| `random_seed`      | INT                                       | Seed used by Random direction/ease. `0` = auto-random each execution |
+| `smooth_subpixel`  | BOOLEAN                                   | Enables subpixel zoom sampling for smoother low-speed/long-duration motion |
 
 ### **Outputs**
 
@@ -45,14 +49,28 @@ while **maintaining the original canvas size and aspect ratio**.
 The node computes a per-frame eased progress value, converts it into a
 **small-dimension margin**, and crops proportionally on both axes to retain aspect ratio
 before resizing back to original resolution.
-All cropping is done with **integer-accurate** bounds.
+
+When `smooth_subpixel = True` (default), the margin is converted to a continuous zoom factor
+and applied with subpixel sampling (`grid_sample`) for smoother low-speed and long-duration zooms.
+When `smooth_subpixel = False`, classic integer crop/resize is used.
+
+If `ease = Random`, one easing curve is randomly chosen per execution from:
+Linear, Ease_In, Ease_Out, Ease_In_Out.
+If `direction = Random`, one direction is randomly chosen per execution from:
+Zoom In, Zoom Out.
+When Random mode is enabled and `random_seed = 0`, the node forces re-execution each run so ComfyUI does not cache/skip the random roll.
+
+`random_seed` behavior summary:
+- `0` → auto-random per execution (fresh roll each run)
+- `> 0` → deterministic random roll (reproducible)
+- If neither direction nor ease is Random, seed has no effect
 </details>
 
 <details>
 <summary>02. Batched Zoom Sequence ➜ Persistent zoom across multiple batches.</summary>
 
 Persistent zoom across multiple batches
-Source: *comfy_zoom_sequence_batched.py*  
+Source: *batch_comfy_zoom_sequence.py*  
 
 ### **What it does**
 
@@ -72,9 +90,13 @@ Zoom state is stored in a temporary JSON file and automatically resumes between 
 | -------------------- | ----------- | ------------------------------------- |
 | `images`             | IMAGE       | Batch of frames                       |
 | `source_frame_count` | INT         | Total number of frames in whole video |
-| `mode`               | Zoom In/Out |                                       |
-| `pixels_per_frame`   | FLOAT       | Zoom speed                            |
-| `ease`               | Easing mode |                                       |
+| `direction`          | Zoom In/Out/Random | Zoom direction                  |
+| `amount_type`        | Select      | Pixels per Frame / Target Percentage  |
+| `pixels_per_frame`   | FLOAT       | Used when `amount_type = Pixels per Frame` |
+| `zoom_percentage`    | INT         | Used when `amount_type = Target Percentage` |
+| `ease`               | Easing mode (Linear / Ease_In / Ease_Out / Ease_In_Out / Random) |      |
+| `random_seed`        | INT         | Seed used for Random direction/ease. `0` = auto-random each execution (kept consistent across chunks) |
+| `smooth_subpixel`    | BOOLEAN     | Enables subpixel zoom sampling for smoother progression |
 
 ### **How it works**
 
@@ -86,6 +108,16 @@ The node tracks:
 * Easing + mode consistency
 
 State resets when the node reaches frame `source_frame_count - 1`.
+
+If `smooth_subpixel = True`, zoom sampling is continuous while timeline continuity is still preserved across batches.
+If `direction = Random`, the batch node rolls once and keeps the same chosen direction across all chunks of that sequence.
+If `ease = Random`, the batch node rolls once and keeps the same chosen easing across all chunks of that sequence.
+With `random_seed = 0`, a new effective seed is generated when a new sequence starts; that effective seed is then kept for all chunks in that sequence.
+
+`random_seed` behavior summary (batch):
+- `0` + Random mode → new effective seed at sequence start, consistent across all chunks of that sequence
+- `> 0` + Random mode → deterministic/reproducible across runs
+- If neither direction nor ease is Random, seed has no effect
 </details>
 
 <details>
@@ -592,21 +624,25 @@ Takes a video file path and applies smooth zoom in/out effects with aspect corre
 
 ### **Key Features**
 
-* All zoom options from the image version (zoom in/out, easing, speed control)
+* All zoom options from the image version (direction, amount type, easing)
 * Extracts frames from input video at original FPS
-* Applies zoom effects using aspect-corrected cropping
+* Applies zoom effects using subpixel sampling (default) or classic aspect-corrected crop/resize
 * Re-encodes frames back to video while preserving audio stream
 * Automatic output filename generation with incrementing numbers
-* Supports configurable zoom speed and easing functions
+* Supports configurable zoom speed or target timeline percentage
 
 ### **Inputs**
 
 | Name              | Type   | Description                                        |
 | ----------------- | ------ | -------------------------------------------------- |
 | `video_path`      | STRING | Full path to the input video file                  |
-| `mode`            | Select | Zoom In, Zoom Out                                  |
-| `pixels_per_frame`| FLOAT  | Zoom speed per frame (default: 1.0)                |
-| `ease`            | Select | Linear, Ease_In, Ease_Out, Ease_In_Out             |
+| `direction`       | Select | Zoom In, Zoom Out, Random                          |
+| `amount_type`     | Select | Pixels per Frame, Target Percentage                |
+| `pixels_per_frame`| FLOAT  | Used when `amount_type = Pixels per Frame`         |
+| `zoom_percentage` | INT    | Used when `amount_type = Target Percentage` (default: 110) |
+| `ease`            | Select | Linear, Ease_In, Ease_Out, Ease_In_Out, Random     |
+| `random_seed`     | INT    | Seed used by Random direction/ease. `0` = auto-random each execution |
+| `smooth_subpixel` | BOOLEAN | Enables subpixel zoom sampling for smoother motion |
 | `prefix`          | STRING | Output filename prefix (default: "zoom_sequence")  |
 
 ### **Outputs**
@@ -617,7 +653,7 @@ Takes a video file path and applies smooth zoom in/out effects with aspect corre
 
 1. Extracts video metadata (duration, FPS, resolution) using ffprobe
 2. Extracts all frames from the video using ffmpeg
-3. Applies zoom transformations using aspect-corrected cropping
+3. Applies zoom transformations using `smooth_subpixel` (continuous) or integer crop/resize mode
 4. Saves processed frames as temporary PNG files
 5. Re-encodes frames to video at original FPS with H.264 codec
 6. Copies original audio stream (if present) into the final video
@@ -625,13 +661,22 @@ Takes a video file path and applies smooth zoom in/out effects with aspect corre
 
 ### **Zoom Modes**
 
-- **Zoom In**: Progressively zooms in from the original view to a cropped detail
-- **Zoom Out**: Progressively zooms out from a cropped detail to the full view
+- **Direction**
+  - **Zoom In**: Progressively zooms in from original view to a cropped detail
+  - **Zoom Out**: Progressively zooms out from cropped detail to full view
+  - **Random**: Randomly chooses Zoom In or Zoom Out for the whole execution
+
+- **Amount Type**
+  - **Pixels per Frame**: Uses fixed pixel-speed progression
+  - **Target Percentage**: Reaches a target zoom (e.g. 110%) over the full sequence duration
 
 ### **Zoom Control**
 
 - **Speed**: Controls zoom progression rate per frame
 - **Easing**: Applies smooth acceleration/deceleration to zoom movement
+- **Random Easing**: If selected, one easing mode is randomly chosen for the whole execution
+- **Auto Seed Behavior**: If Random is used and `random_seed = 0`, the node forces re-execution each run to produce a fresh random roll
+- **Deterministic Seed Behavior**: If `random_seed > 0`, Random direction/easing becomes reproducible across runs
 - **Aspect Correction**: Maintains proper aspect ratio during zoom transitions
 - **Safe Limits**: Prevents over-zooming beyond canvas boundaries
 

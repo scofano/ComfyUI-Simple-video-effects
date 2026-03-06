@@ -2,9 +2,19 @@ import os
 import shutil
 import subprocess
 import tempfile
+import time
 from pathlib import Path
 import torch
 import torch.nn.functional as F
+from .zoom_core import (
+    apply_center_zoom_subpixel,
+    aspect_corrected_crop_box,
+    compute_zoom_margins,
+    margin_to_zoom_factor,
+    resolve_direction_mode,
+    resolve_ease_mode,
+    resolve_seed_value,
+)
 
 # ComfyUI folder_paths
 try:
@@ -17,28 +27,6 @@ FFMPEG = shutil.which("ffmpeg")
 FFPROBE = shutil.which("ffprobe")
 if not FFMPEG or not FFPROBE:
     raise RuntimeError("ffmpeg and ffprobe not found on PATH.")
-
-# ---------- EASING ------------------------------------------------------------
-def ease_value(t: float, mode: str) -> float:
-    key = mode.strip().upper().replace("-", "_")
-    if key == "LINEAR":
-        return t
-    elif key == "EASE_IN":
-        return t * t * t
-    elif key == "EASE_OUT":
-        u = 1.0 - t
-        return 1.0 - u * u * u
-    elif key == "EASE_IN_OUT":
-        return t * t * (3 - 2 * t)  # smoothstep
-    return t  # fallback
-
-def normalize_mode(mode: str) -> str:
-    m = mode.strip().lower()
-    if m in ("zoom in", "in"):
-        return "IN"
-    if m in ("zoom out", "out"):
-        return "OUT"
-    return "IN"
 
 def get_video_info(video_path):
     """Get video duration, fps, width, height"""
@@ -134,9 +122,13 @@ class ZoomSequenceVideoNode:
         return {
             "required": {
                 "video_path": ("STRING", {"default": ""}),
-                "mode": (["Zoom In", "Zoom Out"], {"default": "Zoom In"}),
+                "direction": (["Zoom In", "Zoom Out", "Random"], {"default": "Zoom In"}),
+                "amount_type": (["Pixels per Frame", "Target Percentage"], {"default": "Pixels per Frame"}),
                 "pixels_per_frame": ("FLOAT", {"default": 1.0, "min": 0.0, "step": 0.1}),
-                "ease": (["Linear", "Ease_In", "Ease_Out", "Ease_In_Out"], {"default": "Linear"}),
+                "zoom_percentage": ("INT", {"default": 110, "min": 100, "max": 10000, "step": 1}),
+                "ease": (["Linear", "Ease_In", "Ease_Out", "Ease_In_Out", "Random"], {"default": "Linear"}),
+                "random_seed": ("INT", {"default": 0, "min": 0, "max": 2147483647}),
+                "smooth_subpixel": ("BOOLEAN", {"default": True}),
                 "prefix": ("STRING", {"default": "zoom_sequence"}),
             }
         }
@@ -147,6 +139,39 @@ class ZoomSequenceVideoNode:
     CATEGORY = "Simple Video Effects/Video Processing"
     OUTPUT_NODE = True
 
+    @classmethod
+    def IS_CHANGED(
+        cls,
+        video_path,
+        direction,
+        amount_type,
+        pixels_per_frame,
+        zoom_percentage,
+        ease,
+        random_seed,
+        smooth_subpixel,
+        prefix,
+    ):
+        random_mode = (
+            str(direction).strip().lower() == "random"
+            or str(ease).strip().upper().replace("-", "_") == "RANDOM"
+        )
+        if random_mode and int(random_seed) == 0:
+            # Force re-execution each run when using auto-seed random mode.
+            # A monotonic nonce is more explicit/reliable than NaN for cache invalidation.
+            return ("AUTO_RANDOM_NONCE", time.time_ns())
+        return (
+            str(video_path),
+            str(direction),
+            str(amount_type),
+            float(pixels_per_frame),
+            int(zoom_percentage),
+            str(ease),
+            int(random_seed),
+            bool(smooth_subpixel),
+            str(prefix),
+        )
+
     # ---- helpers -------------------------------------------------------------
     def _resize_to(self, frame_hwc: torch.Tensor, size_hw):
         H, W = size_hw
@@ -154,73 +179,16 @@ class ZoomSequenceVideoNode:
         x = F.interpolate(x, size=(H, W), mode="bilinear", align_corners=False)
         return x.squeeze(0).permute(1, 2, 0)
 
-    def _aspect_corrected_crop_box(self, W: int, H: int, m_small_int: int):
-        """
-        Given an integer scalar margin on the smaller dimension (per-side),
-        compute integer crop box (x0,y0,x1,y1) that:
-          - preserves aspect (within ±1 px due to rounding),
-          - never exceeds bounds.
-        """
-        aspect = W / H if H > 0 else 1.0
-
-        # Which side is smaller?
-        small = min(W, H)
-        if small <= 2:
-            return 0, 0, W, H, 0, 0
-
-        # Safe guard: ensure at least 1 px interior
-        max_small_margin = max(0, (small // 2) - 1)
-        m_small = max(0, min(int(m_small_int), max_small_margin))
-
-        # Fractional zoom level based on smaller half-size
-        half_small = small / 2.0
-        frac = 0.0 if half_small <= 0 else (m_small / half_small)  # 0..~1
-
-        # Proportional margins per axis to keep aspect (before integer correction)
-        m_x = int(round(frac * (W / 2.0)))
-        m_y = int(round(frac * (H / 2.0)))
-
-        # Compute crop size
-        cw = W - 2 * m_x
-        ch = H - 2 * m_y
-
-        # Enforce minimum interior
-        cw = max(1, cw)
-        ch = max(1, ch)
-
-        # ---- Aspect correction (integer) ------------------------------------
-        # target: cw / ch == W / H  =>  cw == round(ch * aspect)
-        ideal_cw = int(round(ch * aspect))
-        ideal_cw = max(1, min(ideal_cw, W - 2))  # keep some border to be safe in edge cases
-
-        if ideal_cw != cw:
-            # Recompute m_x from ideal_cw, keep m_y if possible
-            cw = ideal_cw
-            m_x = (W - cw) // 2
-            # ensure symmetric crop; parity fix if needed
-            if W - 2 * m_x != cw:
-                m_x2 = max(0, min(m_x + 1, (W - 1) // 2))
-                if W - 2 * m_x2 == cw:
-                    m_x = m_x2
-                else:
-                    # else recompute ch from cw to restore symmetry
-                    ch = max(1, int(round(cw / aspect)))
-                    m_y = (H - ch) // 2
-
-        # Final clamp to safe range
-        m_x = max(0, min(m_x, (W - 1) // 2))
-        m_y = max(0, min(m_y, (H - 1) // 2))
-
-        x0, y0 = m_x, m_y
-        x1, y1 = W - m_x, H - m_y
-        return x0, y0, x1, y1, m_x, m_y
-
     # ---- main ---------------------------------------------------------------
     def apply_zoom_sequence(self,
                           video_path: str,
-                          mode: str,
+                          direction: str,
+                          amount_type: str,
                           pixels_per_frame: float,
+                          zoom_percentage: int,
                           ease: str,
+                          random_seed: int,
+                          smooth_subpixel: bool,
                           prefix: str):
 
         if not os.path.exists(video_path):
@@ -228,6 +196,10 @@ class ZoomSequenceVideoNode:
 
         # Get video info
         duration, fps, width, height = get_video_info(video_path)
+
+        seed_i, auto_seed = resolve_seed_value(random_seed)
+        effective_direction, rolled_direction = resolve_direction_mode(direction, seed_i)
+        effective_ease, rolled_random = resolve_ease_mode(ease, seed_i + 1)
 
         # Create output folder
         output_dir = Path(OUTPUT_DIR)
@@ -249,7 +221,19 @@ class ZoomSequenceVideoNode:
             images = load_frames(frames_dir)
 
             # Apply zoom sequence (same logic as image version)
-            zoomed_images, info = self._apply_zoom(images, mode, pixels_per_frame, ease)
+            zoomed_images, info = self._apply_zoom(
+                images,
+                effective_direction,
+                amount_type,
+                pixels_per_frame,
+                zoom_percentage,
+                effective_ease,
+                smooth_subpixel,
+                rolled_direction,
+                rolled_random,
+                seed_i,
+                auto_seed,
+            )
 
             # Save processed frames
             processed_frames_dir = tmpdir / "processed_frames"
@@ -280,7 +264,7 @@ class ZoomSequenceVideoNode:
 
         return (str(output_path),)
 
-    def _apply_zoom(self, images, mode, pixels_per_frame, ease):
+    def _apply_zoom(self, images, direction, amount_type, pixels_per_frame, zoom_percentage, ease, smooth_subpixel, rolled_direction, rolled_random, random_seed, auto_seed):
         """Apply zoom sequence to images (copied from ZoomSequenceNode)"""
         if images.ndim != 4:
             return (images, "Input is not a batched IMAGE (B,H,W,C).")
@@ -288,59 +272,67 @@ class ZoomSequenceVideoNode:
         if B <= 0:
             return (images, "Empty batch; nothing to do.")
 
-        # Normalize
-        i_mode = normalize_mode(mode)
-        i_ease = ease
-
-        # Compute max scalar margin ON THE SMALLER DIMENSION (per-side)
         small = min(W, H)
-        max_safe_small_margin = max(0, (small // 2) - 1)
-
-        # keep as float (allows fractional speed), clamp later when actually cropping
-        requested_small_margin_max_f = pixels_per_frame * max(0, B - 1)
-        small_margin_max_f = min(requested_small_margin_max_f, float(max_safe_small_margin))
-
-        # Eased progress 0..1 across frames
-        ts = [0.0] if B == 1 else [i / (B - 1) for i in range(B)]
-        es = [ease_value(t, i_ease) for t in ts]
-
-        # Per-frame scalar margins (float, on the smaller dimension)
-        if i_mode == "IN":
-            m_smalls_f = [small_margin_max_f * e for e in es]
-        else:  # OUT
-            m_smalls_f = [small_margin_max_f * (1.0 - e) for e in es]
+        m_smalls_f, meta = compute_zoom_margins(
+            frame_count=B,
+            small_dim=small,
+            direction=direction,
+            amount_type=amount_type,
+            pixels_per_frame=pixels_per_frame,
+            zoom_percentage=zoom_percentage,
+            ease=ease,
+            timeline_start=0,
+            timeline_total=B,
+        )
 
         # Apply proportional, aspect-corrected crops
         out_frames = []
-        clamped = False
-        used_mx = []
-        used_my = []
+        clamped = bool(meta.get("clamped", False))
         for i in range(B):
-            # Round to integer ONLY where slicing happens
-            m_small_int = int(round(m_smalls_f[i]))
-            # Detect clamping relative to theoretical safe limit
-            if m_small_int != max(0, min(m_small_int, (small // 2) - 1)):
-                clamped = True
+            if smooth_subpixel:
+                zf = margin_to_zoom_factor(m_smalls_f[i], small)
+                out_frames.append(apply_center_zoom_subpixel(images[i], zf, mode="bilinear"))
+            else:
+                # Round to integer ONLY where slicing happens
+                m_small_int = int(round(m_smalls_f[i]))
 
-            x0, y0, x1, y1, m_x, m_y = self._aspect_corrected_crop_box(W, H, m_small_int)
+                x0, y0, x1, y1, _, _ = aspect_corrected_crop_box(W, H, m_small_int)
 
-            if x1 <= x0 or y1 <= y0:
-                out_frames.append(images[i])
-                continue
+                if x1 <= x0 or y1 <= y0:
+                    out_frames.append(images[i])
+                    continue
 
-            cropped = images[i, y0:y1, x0:x1, :]
-            resized = self._resize_to(cropped, (H, W))
-            out_frames.append(resized)
-            used_mx.append(m_x)
-            used_my.append(m_y)
+                cropped = images[i, y0:y1, x0:x1, :]
+                resized = self._resize_to(cropped, (H, W))
+                out_frames.append(resized)
 
         out = torch.stack(out_frames, dim=0)
 
         info_lines = []
-        info_lines.append(f"Frames: {B}, Canvas: {W}x{H}, Mode: {mode}, Ease: {ease}")
-        info_lines.append(f"Requested small-dim max margin: {requested_small_margin_max_f:.2f} px")
-        info_lines.append(f"Applied small-dim max margin:   {small_margin_max_f:.2f} px (safe limit: {max_safe_small_margin} px)")
-        info_lines.append("Note: margins are proportional per axis to preserve aspect; integer crop indices are used.")
+        info_lines.append(
+            f"Frames: {B}, Canvas: {W}x{H}, Direction: {direction}, Amount Type: {amount_type}, Ease: {ease}"
+        )
+        if rolled_direction:
+            info_lines.append(f"Direction Random roll selected: {direction}")
+        if rolled_random:
+            info_lines.append(f"Ease Random roll selected:      {ease}")
+        if rolled_direction or rolled_random:
+            info_lines.append(
+                f"Random seed:                   {int(random_seed)}{' (auto from 0)' if auto_seed else ''}"
+            )
+        info_lines.append(f"Requested small-dim max margin: {meta['requested_small_margin_max_f']:.2f} px")
+        info_lines.append(
+            f"Applied small-dim max margin:   {meta['applied_small_margin_max_f']:.2f} px "
+            f"(safe limit: {meta['max_safe_small_margin']} px)"
+        )
+        info_lines.append(f"Effective max zoom reached:     {meta['effective_max_zoom']:.4f}x")
+        info_lines.append(f"Transform mode:                 {'Subpixel (grid_sample)' if smooth_subpixel else 'Integer crop/resize'}")
+        if str(amount_type).strip().lower() == "target percentage":
+            info_lines.append(f"Target zoom percentage:         {int(zoom_percentage)}%")
+        if smooth_subpixel:
+            info_lines.append("Note: margins are converted to continuous zoom factors and applied with subpixel sampling.")
+        else:
+            info_lines.append("Note: margins are proportional per axis to preserve aspect; integer crop indices are used.")
         if clamped:
             info_lines.append("Warning: requested margins exceeded safe bounds and were clamped.")
         info = "\n".join(info_lines)
