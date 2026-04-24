@@ -1,5 +1,6 @@
 import os
 import csv
+import comfy.utils
 
 # extensões comuns (pode adicionar mais se quiser)
 IMAGE_EXTENSIONS = {
@@ -93,11 +94,15 @@ class ComfyImageAudioCSV:
         images.sort()
         audios.sort()
 
+        pairs = list(zip(images, audios))
+        pbar = comfy.utils.ProgressBar(len(pairs))
+
         # Write CSV
         with open(output_csv, 'w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f, delimiter=';')
-            for img, aud in zip(images, audios):
+            for img, aud in pairs:
                 writer.writerow([img, aud])
+                pbar.update(1)
 
         print(f'CSV generated successfully: {output_csv}')
         return (output_csv,)

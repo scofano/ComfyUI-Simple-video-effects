@@ -103,6 +103,9 @@ class ZoomSequenceNode:
         if B <= 0:
             return (images, "Empty batch; nothing to do.")
 
+        import comfy.utils
+        pbar = comfy.utils.ProgressBar(B)
+
         seed_i, auto_seed = resolve_seed_value(random_seed)
         effective_direction, rolled_direction = resolve_direction_mode(direction, seed_i)
         effective_ease, rolled_random = resolve_ease_mode(ease, seed_i + 1)
@@ -124,6 +127,7 @@ class ZoomSequenceNode:
         out_frames = []
         clamped = bool(meta.get("clamped", False))
         for i in range(B):
+            pbar.update(1)
             if smooth_subpixel:
                 zf = margin_to_zoom_factor(m_smalls_f[i], small)
                 out_frames.append(apply_center_zoom_subpixel(images[i], zf, mode="bilinear"))

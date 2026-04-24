@@ -8,13 +8,7 @@ from pathlib import Path
 import torch
 import numpy as np
 from PIL import Image
-
-# tqdm for progress (with safe fallback)
-try:
-    from tqdm import tqdm
-except ImportError:  # if tqdm isn't installed, just pass through
-    def tqdm(x, *args, **kwargs):
-        return x
+import comfy.utils
 
 
 # Try to import ComfyUI's folder_paths helper
@@ -134,7 +128,7 @@ def build_filter_complex(base_w: int, base_h: int, opacity: float) -> str:
 
 def run_ffmpeg_with_progress(cmd: list[str], total_duration: float | None = None) -> None:
     """
-    Run ffmpeg, parsing -progress output and displaying a tqdm progress bar
+    Run ffmpeg, parsing -progress output and displaying a ProgressBar
     based on out_time_ms.
     """
     print("[VideoOverlay] Running ffmpeg with progress:", " ".join(cmd), flush=True)
@@ -164,34 +158,36 @@ def run_ffmpeg_with_progress(cmd: list[str], total_duration: float | None = None
             raise RuntimeError(f"ffmpeg command failed with return code {ret}")
         return
 
-    with tqdm(total=int(total_duration), unit="s", desc="[VideoOverlay] ffmpeg") as pbar:
-        last_t = 0.0
-        for line in proc.stdout:
-            line = line.strip()
-            if not line:
+    pbar = comfy.utils.ProgressBar(100)
+    last_pct = 0
+    for line in proc.stdout:
+        line = line.strip()
+        if not line:
+            continue
+
+        if line.startswith("out_time_ms="):
+            try:
+                ms = float(line.split("=", 1)[1])
+                t = ms / 1_000_000.0
+            except Exception:
                 continue
 
-            if line.startswith("out_time_ms="):
-                try:
-                    ms = float(line.split("=", 1)[1])
-                    t = ms / 1_000_000.0
-                except Exception:
-                    continue
+            if t > total_duration:
+                t = total_duration
+            
+            pct = int((t / total_duration) * 100)
+            if pct > last_pct:
+                pbar.update_absolute(pct)
+                last_pct = pct
 
-                if t > total_duration:
-                    t = total_duration
-                if t > last_t:
-                    pbar.update(t - last_t)
-                    last_t = t
+        elif line.startswith("progress="):
+            value = line.split("=", 1)[1]
+            if value == "end":
+                pbar.update_absolute(100)
 
-            elif line.startswith("progress="):
-                value = line.split("=", 1)[1]
-                if value == "end" and last_t < total_duration:
-                    pbar.update(total_duration - last_t)
-
-        ret = proc.wait()
-        if ret != 0:
-            raise RuntimeError(f"ffmpeg command failed with return code {ret}")
+    ret = proc.wait()
+    if ret != 0:
+        raise RuntimeError(f"ffmpeg command failed with return code {ret}")
 
 
 def run_ffmpeg_overlay(
@@ -374,7 +370,7 @@ class VideoOverlayBatch:
       Behavior:
         - Creates an overlaid video using ffmpeg.
         - Saves result into default ComfyUI output folder.
-        - Shows tqdm progress from 0% to 100% based on ffmpeg progress.
+        - Shows ProgressBar from 0% to 100% based on ffmpeg progress.
         - Returns the full output filename as STRING.
     """
 

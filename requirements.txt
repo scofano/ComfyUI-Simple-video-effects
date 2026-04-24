@@ -1,6 +1,5 @@
 torch>=1.10
 ffmpeg-python
 soundfile
-tqdm
 numpy
 Pillow

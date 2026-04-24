@@ -173,8 +173,11 @@ class ComfySimpleVideoCombiner:
             else:
                 out = ffmpeg.output(v_out, a_out, output_path, vcodec="libx264", acodec="aac")
 
+            import comfy.utils
+            pbar = comfy.utils.ProgressBar(1)
             out = out.overwrite_output()
             out.run(quiet=True)
+            pbar.update(1)
 
         except ffmpeg.Error as e:
             if getattr(e, "stderr", None) is not None:
@@ -199,13 +202,16 @@ class ComfySimpleVideoCombiner:
             raise ValueError(f"Directory does not exist: {directory}")
 
         if recursive:
+            import comfy.utils
             # Find all subdirectories
-            subdirs = [d for d in directory.iterdir() if d.is_dir()]
+            subdirs = sorted([d for d in directory.iterdir() if d.is_dir()])
             if not subdirs:
                 raise ValueError(f"No subdirectories found in '{directory}' for recursive processing")
 
+            pbar = comfy.utils.ProgressBar(len(subdirs))
             output_paths = []
-            for subdir in sorted(subdirs):
+            for subdir in subdirs:
+                pbar.update(1)
                 # Generate output filename based on subdirectory name
                 subdir_name = subdir.name
                 base_name = output_filename.strip() or "combined_output.mp4"

@@ -5,6 +5,12 @@ import tempfile
 from pathlib import Path
 import torch
 import torch.nn.functional as F
+try:
+    from comfy.utils import ProgressBar
+except ImportError:
+    class ProgressBar:
+        def __init__(self, total): self.total = total
+        def update(self, value): pass
 
 # ComfyUI folder_paths
 try:
@@ -218,12 +224,15 @@ class CameraMoveVideoNode:
                 break
             counter += 1
 
+        pbar = ProgressBar(3)
+
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)
 
             # Extract frames
             frames_dir = extract_frames(video_path, tmpdir, fps)
             images = load_frames(frames_dir)
+            pbar.update(1)
 
             # Apply camera movement (same logic as image version)
             moved_images, info = self._apply_movement(images,
@@ -243,6 +252,8 @@ class CameraMoveVideoNode:
                 from PIL import Image
                 img = Image.fromarray(arr)
                 img.save(processed_frames_dir / f"frame_{i:06d}.png")
+            
+            pbar.update(1)
 
             # Encode to video with audio
             cmd = [
@@ -259,6 +270,7 @@ class CameraMoveVideoNode:
                 str(output_path)
             ]
             subprocess.run(cmd, check=True)
+            pbar.update(1)
 
         return (str(output_path),)
 

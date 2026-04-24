@@ -119,6 +119,9 @@ class CameraMoveNode:
         if B <= 0:
             return (images, "Empty batch; nothing to do.")
 
+        import comfy.utils
+        pbar = comfy.utils.ProgressBar(B)
+
         dist = max(0.0, float(distance_px))
         dist_int = int(round(dist))
 
@@ -186,6 +189,7 @@ class CameraMoveNode:
         crops = []
 
         for i in range(B):
+            pbar.update(1)
             e = es[i]
             frame = imgs_big[i]  # (C, newH, newW)
 

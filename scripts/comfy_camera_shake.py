@@ -140,6 +140,9 @@ class CameraShakeNode:
         if B <= 0:
             return (images, "Empty batch; nothing to do.")
 
+        import comfy.utils
+        pbar = comfy.utils.ProgressBar(B)
+
         # Normalize
         shake_mode = normalize_mode(mode)
         if loop:
@@ -172,6 +175,7 @@ class CameraShakeNode:
         num_cycles = 1.0 if loop else 2.0
 
         for i in range(B):
+            pbar.update(1)
             t = ts[i]
             # Envelope (0..1) over time for radius
             radius_factor = 1.0 if loop else (es[i] if B > 1 else 1.0)

@@ -8,13 +8,7 @@ from pathlib import Path
 import torch
 import numpy as np
 from PIL import Image
-
-# tqdm for progress (with safe fallback)
-try:
-    from tqdm import tqdm
-except ImportError:  # if tqdm isn't installed, just pass through
-    def tqdm(x, *args, **kwargs):
-        return x
+import comfy.utils
 
 # ---- ffmpeg helpers (adapted from videoverlay.py) ----
 
@@ -196,7 +190,8 @@ def tensor_to_png_sequence(images: torch.Tensor, out_dir: Path) -> None:
     n = images.shape[0]
 
     print(f"[VideoOverlay] Saving {n} input frames to {out_dir}", flush=True)
-    for i in tqdm(range(n), desc="[VideoOverlay] Saving input frames"):
+    pbar = comfy.utils.ProgressBar(n)
+    for i in range(n):
         frame = images[i]
         # Clamp & convert to uint8
         frame = (frame.clamp(0.0, 1.0) * 255.0).round().to(torch.uint8).numpy()
@@ -207,6 +202,7 @@ def tensor_to_png_sequence(images: torch.Tensor, out_dir: Path) -> None:
             frame = frame[..., :3]
         img = Image.fromarray(frame)
         img.save(out_dir / f"frame_{i:06d}.png")
+        pbar.update_absolute(i + 1)
 
 
 def png_sequence_to_tensor(in_dir: Path) -> torch.Tensor:
@@ -221,10 +217,12 @@ def png_sequence_to_tensor(in_dir: Path) -> torch.Tensor:
 
     print(f"[VideoOverlay] Loading {len(frames)} output frames from {in_dir}", flush=True)
     imgs = []
-    for p in tqdm(frames, desc="[VideoOverlay] Loading output frames"):
+    pbar = comfy.utils.ProgressBar(len(frames))
+    for i, p in enumerate(frames):
         img = Image.open(p).convert("RGB")
         arr = np.array(img).astype(np.float32) / 255.0
         imgs.append(arr)
+        pbar.update_absolute(i + 1)
 
     arr = np.stack(imgs, axis=0)  # [N, H, W, C]
     return torch.from_numpy(arr)
