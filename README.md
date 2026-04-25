@@ -1114,7 +1114,60 @@ Applies a PNG image (with optional alpha channel) as an overlay onto a full vide
 </details>
 
 <details>
-<summary>20. Image Audio CSV Generator ➜ Generate CSV files pairing image and audio files.</summary>
+<summary>20. Chromatic Aberration ➜ Shift R and B channels in opposite directions for a lens-distortion look.</summary>
+
+Shift colour channels in opposite directions to simulate lens chromatic aberration
+Source: *comfy_chromatic_aberration.py*
+
+### **What it does**
+
+Displaces the Red and Blue channels in opposite directions while leaving Green centred, replicating the colour fringing produced by real camera lenses. Works on a single image or a full video batch (B, H, W, C tensor) entirely in PyTorch — no FFmpeg round-trip.
+
+### **Key Features**
+
+* Pure-PyTorch implementation — fast on any batch size
+* Three shift directions: Horizontal, Vertical, Diagonal
+* Four channel-polarity presets (which side R goes, B always mirrors it)
+* Zero-filled edges — no wrap-around artefacts
+* RGBA-safe (preserves alpha channel when present)
+
+### **Inputs**
+
+| Name         | Type    | Description                                                                 |
+| ------------ | ------- | --------------------------------------------------------------------------- |
+| `images`     | IMAGE   | Single image or batched video frames                                        |
+| `shift`      | INT (0–300) | Pixel offset applied to each channel                                    |
+| `direction`  | Select  | Horizontal / Vertical / Diagonal                                            |
+| `red_leads`  | Select  | Which side R shifts toward — B always goes the opposite way                 |
+
+**`red_leads` options:**
+
+| Value | R moves | B moves |
+|---|---|---|
+| Red right / Blue left | → | ← |
+| Red left / Blue right | ← | → |
+| Red down / Blue up | ↓ | ↑ |
+| Red up / Blue down | ↑ | ↓ |
+
+When `direction = Diagonal`, the horizontal and vertical components are combined automatically.
+
+### **Outputs**
+
+* `images` – Colour-shifted frames, values clamped to [0, 1]
+
+### **How it works**
+
+Each channel is sliced from the tensor, shifted with `torch.zeros` padding on the vacated edge, then the three channels are re-stacked. Green is never moved, so luminance stays roughly centred and the fringe reads as a natural aberration.
+
+**Equivalent FFmpeg command (for reference):**
+```bash
+ffmpeg -i input.mp4 -vf "rgbashift=rh=8:bh=-8" -c:a copy output.mp4
+```
+
+</details>
+
+<details>
+<summary>21. Image Audio CSV Generator ➜ Generate CSV files pairing image and audio files.</summary>
 
 Generate CSV files pairing image and audio files from separate directories
 Source: *comfy_image_audio_csv.py*

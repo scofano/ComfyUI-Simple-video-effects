@@ -20,6 +20,7 @@ from .scripts.comfy_image_sequence_overlay import ImageSequenceOverlay
 from .scripts.comfy_video_overlay_from_file import VideoOverlayFromFile
 from .scripts.comfy_add_soundtrack import ComfyAddSoundtrack
 from .scripts.comfy_image_audio_csv import ComfyImageAudioCSV
+from .scripts.comfy_chromatic_aberration import ChromaticAberrationNode
 
 
 NODE_CLASS_MAPPINGS = {
@@ -45,6 +46,7 @@ NODE_CLASS_MAPPINGS = {
     "VideoOverlayFromFile": VideoOverlayFromFile,
     "ComfyAddSoundtrack": ComfyAddSoundtrack,
     "ComfyImageAudioCSV": ComfyImageAudioCSV,
+    "ChromaticAberrationNode": ChromaticAberrationNode,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -70,6 +72,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "VideoOverlayFromFile": "Video Overlay (File Input)",
     "ComfyAddSoundtrack": "Add Soundtrack",
     "ComfyImageAudioCSV": "Image Audio CSV Generator",
+    "ChromaticAberrationNode": "Chromatic Aberration",
 }
 
 __all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS"]
