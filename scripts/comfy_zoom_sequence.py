@@ -81,6 +81,7 @@ class ZoomSequenceNode:
     # ---- helpers -------------------------------------------------------------
     def _resize_to(self, frame_hwc: torch.Tensor, size_hw):
         H, W = size_hw
+        device = frame_hwc.device
         x = frame_hwc.permute(2, 0, 1).unsqueeze(0)  # 1,C,H,W
         x = F.interpolate(x, size=(H, W), mode="bilinear", align_corners=False)
         return x.squeeze(0).permute(1, 2, 0)
@@ -102,6 +103,10 @@ class ZoomSequenceNode:
         B, H, W, C = images.shape
         if B <= 0:
             return (images, "Empty batch; nothing to do.")
+
+        # GPU acceleration: keep tensors on their device (GPU if available)
+        device = images.device
+        images = images.to(device)
 
         import comfy.utils
         pbar = comfy.utils.ProgressBar(B)

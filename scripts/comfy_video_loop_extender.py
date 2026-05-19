@@ -32,6 +32,10 @@ class VideoLoopExtenderNode:
                 }),
             },
             "optional": {
+                "use_gpu": ("BOOLEAN", {
+                    "default": True,
+                    "label": "Use GPU encoding (NVENC) if available"
+                }),
                 "delete_original": ("BOOLEAN", {
                     "default": False,
                     "label": "Delete original video file after processing"
@@ -108,6 +112,7 @@ class VideoLoopExtenderNode:
         self,
         video_path: str,
         extend_factor: float = 1.0,
+        use_gpu: bool = True,
         delete_original: bool = False,
     ) -> tuple:
         if not os.path.exists(video_path):
@@ -133,8 +138,9 @@ class VideoLoopExtenderNode:
         else:
             stream = ffmpeg.concat(*inputs, v=1, a=1)  # v=1 for video, a=1 for audio
 
-        # Output
-        stream = ffmpeg.output(stream, output_path, vcodec='libx264', acodec='aac')
+        # Output - GPU acceleration support (falls back to libx264 if NVIDIA GPU unavailable)
+        vcodec = 'hevc_nvenc' if use_gpu else 'libx264'
+        stream = ffmpeg.output(stream, output_path, vcodec=vcodec, acodec='aac')
         stream = stream.overwrite_output()
 
         try:

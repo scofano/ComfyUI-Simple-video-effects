@@ -119,6 +119,10 @@ class CameraMoveNode:
         if B <= 0:
             return (images, "Empty batch; nothing to do.")
 
+        # GPU acceleration: keep tensors on their device (GPU if available)
+        device = images.device
+        images = images.to(device)
+
         import comfy.utils
         pbar = comfy.utils.ProgressBar(B)
 
