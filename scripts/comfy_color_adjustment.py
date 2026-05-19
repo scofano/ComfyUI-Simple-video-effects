@@ -1,17 +1,13 @@
 import torch
-from PIL import Image, ImageEnhance
-import numpy as np
+import torch.nn.functional as F
 
 
 class ColorAdjustmentNode:
     """
     Adjusts brightness, contrast, and saturation on batched image tensors.
     Parameters use 0-100 scale where 100 = no change.
-    Includes real-time progress bar during processing.
+    GPU-accelerated using PyTorch operations.
     """
-
-    def __init__(self):
-        self.pbar = None
 
     @classmethod
     def INPUT_TYPES(cls):
@@ -34,58 +30,132 @@ class ColorAdjustmentNode:
             raise ValueError(f"Expected 4D tensor (B,H,W,C), got shape {images.shape}")
 
         B, H, W, C = images.shape
+        device = images.device
 
-        # Convert brightness/contrast/saturation from 0-100 scale to PIL factors (0-2 approx)
+        # Convert brightness/contrast/saturation from 0-100 scale to factors
         brightness_factor = brightness / 100.0
         contrast_factor = contrast / 100.0
         saturation_factor = saturation / 100.0
 
-        out_frames = []
+        # Move to device and apply adjustments (GPU if available)
+        output = images.to(device).clone()
 
-        # Process each frame
-        for i in range(B):
-            # Extract single frame and convert to PIL Image
-            frame_tensor = images[i]  # (H, W, C) in range [0, 1]
+        # Apply brightness: multiply pixel values
+        if brightness_factor != 1.0:
+            output = output * brightness_factor
+            output = torch.clamp(output, 0, 1)
 
-            # Convert to numpy and then PIL Image
-            frame_np = frame_tensor.cpu().numpy()
-            frame_np = np.clip(frame_np * 255, 0, 255).astype(np.uint8)
+        # Apply contrast: scale around mean (0.5 is neutral gray)
+        if contrast_factor != 1.0:
+            output = 0.5 + (output - 0.5) * contrast_factor
+            output = torch.clamp(output, 0, 1)
 
-            # Convert to RGB if needed
-            if C == 3:
-                pil_image = Image.fromarray(frame_np, mode="RGB")
-            elif C == 4:
-                pil_image = Image.fromarray(frame_np, mode="RGBA")
-            else:
-                raise ValueError(f"Unsupported number of channels: {C}")
-
-            # Apply brightness adjustment
-            if brightness_factor != 1.0:
-                pil_image = ImageEnhance.Brightness(pil_image).enhance(brightness_factor)
-
-            # Apply contrast adjustment
-            if contrast_factor != 1.0:
-                pil_image = ImageEnhance.Contrast(pil_image).enhance(contrast_factor)
-
-            # Apply saturation adjustment (using Color enhance for saturation)
-            if saturation_factor != 1.0:
-                pil_image = ImageEnhance.Color(pil_image).enhance(saturation_factor)
-
-            # Convert back to tensor
-            adjusted_np = np.array(pil_image).astype(np.float32) / 255.0
-            adjusted_tensor = torch.from_numpy(adjusted_np)
-
-            out_frames.append(adjusted_tensor)
-
-        # Stack frames back into batch
-        output = torch.stack(out_frames, dim=0)
+        # Apply saturation: convert RGB to HSV, adjust S, convert back
+        if saturation_factor != 1.0 and C >= 3:
+            output = self._adjust_saturation(output, saturation_factor)
 
         # Create info string
         info = (
-            f"ColorAdjustment: {B} frames, "
-            f"brightness={brightness} (factor: {brightness_factor:.2f}), "
-            f"contrast={contrast} (factor: {contrast_factor:.2f}), "
-            f"saturation={saturation} (factor: {saturation_factor:.2f})"
+            f"ColorAdjustment (GPU): {B} frames, "
+            f"brightness={brightness}, "
+            f"contrast={contrast}, "
+            f"saturation={saturation}"
         )
 
         return (output, info)
+
+    def _adjust_saturation(self, images: torch.Tensor, saturation_factor: float) -> torch.Tensor:
+        """
+        Adjust saturation by converting RGB to HSV, modifying S channel, converting back.
+        GPU-accelerated using PyTorch.
+        """
+        B, H, W, C = images.shape
+
+        # Extract RGB channels
+        rgb = images[..., :3]  # (B, H, W, 3)
+        alpha = images[..., 3:] if C > 3 else None
+
+        # Convert RGB to HSV using PyTorch
+        # Normalize RGB to [0, 1]
+        r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
+
+        max_rgb = torch.max(rgb, dim=-1)[0]
+        min_rgb = torch.min(rgb, dim=-1)[0]
+        delta = max_rgb - min_rgb
+
+        # Value
+        v = max_rgb
+
+        # Saturation
+        s = torch.where(v != 0, delta / v, torch.zeros_like(delta))
+
+        # Hue
+        h = torch.zeros_like(s)
+
+        # Compute hue for each case
+        mask_r = (max_rgb == r) & (delta != 0)
+        mask_g = (max_rgb == g) & (delta != 0)
+        mask_b = (max_rgb == b) & (delta != 0)
+
+        h[mask_r] = (60 * ((g[mask_r] - b[mask_r]) / delta[mask_r]) + 360) % 360
+        h[mask_g] = (60 * ((b[mask_g] - r[mask_g]) / delta[mask_g]) + 120) % 360
+        h[mask_b] = (60 * ((r[mask_b] - g[mask_b]) / delta[mask_b]) + 240) % 360
+
+        # Adjust saturation
+        s = torch.clamp(s * saturation_factor, 0, 1)
+
+        # Convert HSV back to RGB
+        h_i = (h / 60.0).long() % 6
+        f = (h / 60.0) - h_i.float()
+
+        p = v * (1 - s)
+        q = v * (1 - f * s)
+        t = v * (1 - (1 - f) * s)
+
+        # Create output based on hue sector
+        out_r = torch.zeros_like(v)
+        out_g = torch.zeros_like(v)
+        out_b = torch.zeros_like(v)
+
+        mask_0 = h_i == 0
+        mask_1 = h_i == 1
+        mask_2 = h_i == 2
+        mask_3 = h_i == 3
+        mask_4 = h_i == 4
+        mask_5 = h_i == 5
+
+        out_r[mask_0] = v[mask_0]
+        out_g[mask_0] = t[mask_0]
+        out_b[mask_0] = p[mask_0]
+
+        out_r[mask_1] = q[mask_1]
+        out_g[mask_1] = v[mask_1]
+        out_b[mask_1] = p[mask_1]
+
+        out_r[mask_2] = p[mask_2]
+        out_g[mask_2] = v[mask_2]
+        out_b[mask_2] = t[mask_2]
+
+        out_r[mask_3] = p[mask_3]
+        out_g[mask_3] = q[mask_3]
+        out_b[mask_3] = v[mask_3]
+
+        out_r[mask_4] = t[mask_4]
+        out_g[mask_4] = p[mask_4]
+        out_b[mask_4] = v[mask_4]
+
+        out_r[mask_5] = v[mask_5]
+        out_g[mask_5] = p[mask_5]
+        out_b[mask_5] = q[mask_5]
+
+        # Stack RGB channels
+        rgb_adjusted = torch.stack([out_r, out_g, out_b], dim=-1)
+        rgb_adjusted = torch.clamp(rgb_adjusted, 0, 1)
+
+        # Combine with alpha channel if present
+        if alpha is not None:
+            output = torch.cat([rgb_adjusted, alpha], dim=-1)
+        else:
+            output = rgb_adjusted
+
+        return output

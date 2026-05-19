@@ -27,6 +27,7 @@ class ColorAdjustmentVideoNode:
                 "contrast": ("INT", {"default": 100, "min": 0, "max": 200, "step": 1}),
                 "saturation": ("INT", {"default": 100, "min": 0, "max": 200, "step": 1}),
                 "delete_original": ("BOOLEAN", {"default": False}),
+                "use_gpu": ("BOOLEAN", {"default": True}),
                 "prefix": ("STRING", {"default": "color_adjusted"}),
             }
         }
@@ -43,6 +44,7 @@ class ColorAdjustmentVideoNode:
         contrast: int,
         saturation: int,
         delete_original: bool,
+        use_gpu: bool,
         prefix: str,
     ):
         # Locate ffmpeg and ffprobe
@@ -115,6 +117,14 @@ class ColorAdjustmentVideoNode:
         # Generate unique output filename
         output_path = self._get_unique_output_path(prefix, output_dir=OUTPUT_DIR)
 
+        # Select codec based on GPU availability
+        if use_gpu:
+            video_codec = "hevc_nvenc"  # NVIDIA GPU encoder
+            pix_fmt = "cuda"
+        else:
+            video_codec = "libx264"  # CPU encoder
+            pix_fmt = "yuv420p"
+
         # Build FFmpeg command
         cmd = [
             FFMPEG,
@@ -124,12 +134,14 @@ class ColorAdjustmentVideoNode:
             "-vf",
             vf,
             "-c:v",
-            "libx264",
-            "-preset",
-            "ultrafast",
-            "-pix_fmt",
-            "yuv420p",
+            video_codec,
         ]
+
+        # Add preset/quality settings based on codec
+        if use_gpu:
+            cmd.extend(["-preset", "fast"])  # fast, medium, slow for NVENC
+        else:
+            cmd.extend(["-preset", "ultrafast", "-pix_fmt", "yuv420p"])
 
         # Preserve audio
         if has_audio:
@@ -150,10 +162,10 @@ class ColorAdjustmentVideoNode:
             except Exception as e:
                 print(f"Warning: Failed to delete original file: {e}")
 
+        gpu_status = "NVENC (GPU)" if use_gpu else "libx264 (CPU)"
         info = (
-            f"ColorAdjustment: brightness={brightness} (val: {brightness_val:.2f}), "
-            f"contrast={contrast} (val: {contrast_val:.2f}), "
-            f"saturation={saturation} (val: {saturation_val:.2f}), "
+            f"ColorAdjustment [{gpu_status}]: brightness={brightness}, "
+            f"contrast={contrast}, saturation={saturation}, "
             f"audio={'preserved' if has_audio else 'none'}"
         )
 
