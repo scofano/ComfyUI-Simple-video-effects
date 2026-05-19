@@ -1,7 +1,7 @@
 [project]
 name = "simple-video-effects"
 description = "Collection of lightweight video manipulation and utility nodes for ComfyUI including zoom, camera movement, overlays, transitions, audio, and video file tools."
-version = "1.1.0"
+version = "1.2.0"
 readme = "README.md"
 requires-python = ">=3.9"
 license = { file = "LICENSE" }
