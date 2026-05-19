@@ -47,6 +47,9 @@ class ImageTransitionNode:
                 "thickness": ("INT", {"default": 2, "min": 1, "max": 50}),
                 "hex_color": ("STRING", {"default": "#FFFFFF"}),
                 "prefix": ("STRING", {"default": "transition"}),
+            },
+            "optional": {
+                "use_gpu": ("BOOLEAN", {"default": False, "label": "Use GPU encoding (NVENC) if available"})
             }
         }
 
@@ -60,7 +63,7 @@ class ImageTransitionNode:
 
     OPTIONAL_OUTPUTS = ("output_path",)
 
-    def create_transition(self, image1, image2, duration, direction, line_toggle, thickness, hex_color, prefix, output_path=None):
+    def create_transition(self, image1, image2, duration, direction, line_toggle, thickness, hex_color, prefix, use_gpu=False, output_path=None):
         # Extract single frames
         if image1.shape[0] != 1 or image2.shape[0] != 1:
             raise ValueError("Inputs must be single images, not batches.")
@@ -155,16 +158,27 @@ class ImageTransitionNode:
                 frame.save(frames_dir / f"frame_{i:06d}.png")
                 pbar.update(1)
 
-            # Encode to MP4
+            # Encode to MP4 (try GPU if requested, fallback to CPU)
+            vcodec = 'hevc_nvenc' if use_gpu else 'libx264'
             cmd = [
                 FFMPEG,
                 "-y",
                 "-framerate", str(fps),
                 "-i", str(frames_dir / "frame_%06d.png"),
-                "-c:v", "libx264",
+                "-c:v", vcodec,
                 "-pix_fmt", "yuv420p",
                 str(output_path)
             ]
-            subprocess.run(cmd, check=True)
+
+            try:
+                subprocess.run(cmd, check=True)
+            except subprocess.CalledProcessError as e:
+                # If NVENC fails, fallback to libx264
+                if use_gpu and 'hevc_nvenc' in vcodec:
+                    print(f"NVENC encoding failed, falling back to libx264...")
+                    cmd[cmd.index(vcodec)] = 'libx264'
+                    subprocess.run(cmd, check=True)
+                else:
+                    raise
 
         return (str(output_path),)

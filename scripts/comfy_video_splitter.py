@@ -113,6 +113,9 @@ class VideoSplitterNode:
                 "folder_prefix": ("STRING", {"default": "split_video"}),
                 "min_audio_duration": ("INT", {"default": 5, "min": 1}),
                 "end_padding": ("FLOAT", {"default": 0.2, "min": 0.0, "step": 0.1}),
+            },
+            "optional": {
+                "use_gpu": ("BOOLEAN", {"default": False, "label": "Use GPU encoding (NVENC) if available"})
             }
         }
 
@@ -122,7 +125,7 @@ class VideoSplitterNode:
     CATEGORY = "Simple Video Effects"
     OUTPUT_NODE = True
 
-    def split_video(self, video_path, ass_path, divider_chars, folder_prefix, min_audio_duration, end_padding):
+    def split_video(self, video_path, ass_path, divider_chars, folder_prefix, min_audio_duration, end_padding, use_gpu=False):
         if not os.path.exists(video_path):
             raise ValueError(f"Video file not found: {video_path}")
         if not os.path.exists(ass_path):
@@ -216,19 +219,30 @@ class VideoSplitterNode:
 
             print(f"Exporting segment {file_counter}: {start_time} to {end_time}")
 
+            vcodec = 'hevc_nvenc' if use_gpu else 'libx264'
             cmd = [
                 FFMPEG,
                 "-y",
                 "-ss", str(start_time),
                 "-i", video_path,
                 "-t", str(duration_segment),
-                "-c:v", "libx264",
+                "-c:v", vcodec,
                 "-c:a", "aac",
                 "-preset", "ultrafast",
                 "-avoid_negative_ts", "make_zero",
                 str(output_file)
             ]
-            subprocess.run(cmd, check=True)
+
+            try:
+                subprocess.run(cmd, check=True)
+            except subprocess.CalledProcessError as e:
+                # If NVENC fails, fallback to libx264
+                if use_gpu:
+                    print(f"NVENC encoding failed for segment {file_counter}, falling back to libx264...")
+                    cmd[cmd.index(vcodec)] = 'libx264'
+                    subprocess.run(cmd, check=True)
+                else:
+                    raise
             file_counter += 1
             prev_end = end_time + frame_duration
             pbar.update(1)

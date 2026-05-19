@@ -50,6 +50,9 @@ class VideoImageOverlay:
                         "default": False,
                     },
                 ),
+            },
+            "optional": {
+                "use_gpu": ("BOOLEAN", {"default": False, "label": "Use GPU encoding (NVENC) if available"})
             }
         }
 
@@ -111,6 +114,7 @@ class VideoImageOverlay:
         overlay_image_path: str,
         video_path: str,
         output_path: str,
+        use_gpu: bool = False,
     ) -> list:
 
         cmd = [
@@ -123,6 +127,8 @@ class VideoImageOverlay:
         # No resizing: direct overlay
         filter_complex = "[0:v][1:v]overlay=0:0:format=auto[vout]"
 
+        vcodec = 'hevc_nvenc' if use_gpu else 'libx264'
+
         cmd.extend([
             "-filter_complex", filter_complex,
 
@@ -133,7 +139,7 @@ class VideoImageOverlay:
             "-map", "0:a?",
 
             # Encoding settings
-            "-c:v", "libx264",
+            "-c:v", vcodec,
             "-pix_fmt", "yuv420p",
             "-c:a", "aac",
 
@@ -174,6 +180,7 @@ class VideoImageOverlay:
         video_path: str,
         suffix: str,
         delete_original: bool = False,
+        use_gpu: bool = False,
     ) -> Tuple[str]:
 
         # Normalize paths once here so everything else uses the same real paths
@@ -190,6 +197,7 @@ class VideoImageOverlay:
             overlay_image_path=overlay_image_path,
             video_path=video_path,
             output_path=output_path,
+            use_gpu=use_gpu,
         )
 
         try:
@@ -198,6 +206,19 @@ class VideoImageOverlay:
             raise RuntimeError(
                 "ffmpeg executable not found. Make sure ffmpeg is installed and available in PATH."
             )
+        except Exception as e:
+            # If NVENC fails, fallback to libx264
+            if use_gpu and "hevc_nvenc" in str(e):
+                print(f"NVENC encoding failed, falling back to libx264...")
+                cmd = self._build_ffmpeg_command(
+                    overlay_image_path=overlay_image_path,
+                    video_path=video_path,
+                    output_path=output_path,
+                    use_gpu=False,
+                )
+                self._run_ffmpeg_with_progress(cmd)
+            else:
+                raise
 
         # If toggled on, delete the original video after processing
         if delete_original:
