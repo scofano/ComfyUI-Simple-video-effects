@@ -1180,6 +1180,146 @@ C:\images\image3.jpeg;C:\audio\audio3.flac
 
 </details>
 
+<details>
+<summary>21. Color Adjustment (Image) ➜ Adjust brightness, contrast, and saturation on image batches.</summary>
+
+Adjust brightness, contrast, and saturation on batched images
+Source: *comfy_color_adjustment.py*
+
+### **What it does**
+
+Applies brightness, contrast, and saturation adjustments to a batch of images using PIL ImageEnhance operations.
+All parameters use an intuitive 0-100 scale where 100 = no change.
+
+### **Key Features**
+
+* Real-time progress bar during frame processing
+* Intuitive 0-100 scale parameters (100 = original)
+* Fast in-memory processing using PIL
+* Supports batched image tensors (multiple frames)
+* Preserves image quality with direct pixel enhancement
+
+### **Inputs**
+
+| Name         | Type   | Description                                      |
+| ------------ | ------ | ------------------------------------------------ |
+| `images`     | IMAGE  | Batched image frames (B, H, W, C format)         |
+| `brightness` | INT    | Brightness adjustment (0-200, default: 100)     |
+| `contrast`   | INT    | Contrast adjustment (0-200, default: 100)       |
+| `saturation` | INT    | Saturation adjustment (0-200, default: 100)     |
+
+### **Parameter Scale**
+
+- **100 = no change** (original image)
+- **0 = minimum effect** (brightness: black, contrast/saturation: no effect)
+- **200 = double effect** (brightness: 2x brighter, contrast/saturation: 2x stronger)
+
+### **Outputs**
+
+* `images` – Adjusted image batch (same shape as input)
+* `info` – Metadata string with applied parameters and frame count
+
+### **How it works**
+
+1. Validates input tensor shape (must be B, H, W, C format)
+2. Converts 0-100 scale parameters to PIL ImageEnhance factors
+3. For each frame in the batch:
+   - Converts tensor to PIL Image (0-255 range)
+   - Applies brightness enhancement
+   - Applies contrast enhancement
+   - Applies saturation enhancement via Color filter
+   - Converts back to tensor (0-1 range)
+4. Stacks all processed frames into output batch
+5. Returns adjusted images and metadata string
+
+### **Use Cases**
+
+* Brightening/darkening image sequences
+* Increasing contrast for better visibility
+* Adjusting color saturation for different moods
+* Batch color correction across multiple images
+
+</details>
+
+<details>
+<summary>22. Color Adjustment (Video File) ➜ Adjust brightness, contrast, and saturation on video files.</summary>
+
+Adjust brightness, contrast, and saturation on video files with audio preservation
+Source: *comfy_color_adjustment_video.py*
+
+### **What it does**
+
+Applies brightness, contrast, and saturation adjustments to a video file using FFmpeg filters.
+Automatically preserves original audio and supports optional deletion of the source file.
+
+### **Key Features**
+
+* Uses FFmpeg filters for fast, efficient processing
+* Real-time progress tracking during encoding
+* Automatic audio stream preservation
+* Optional deletion of original video file after processing
+* Intuitive 0-100 scale parameters (100 = no change)
+* Automatic unique filename generation to avoid overwrites
+
+### **Inputs**
+
+| Name             | Type    | Description                                      |
+| ---------------- | ------- | ------------------------------------------------ |
+| `video_path`     | STRING  | Full path to input video file                    |
+| `brightness`     | INT     | Brightness adjustment (0-200, default: 100)     |
+| `contrast`       | INT     | Contrast adjustment (0-200, default: 100)       |
+| `saturation`     | INT     | Saturation adjustment (0-200, default: 100)     |
+| `delete_original` | BOOLEAN | Delete source file after processing (default: False) |
+| `prefix`         | STRING  | Output filename prefix (default: "color_adjusted") |
+
+### **Parameter Scale**
+
+- **100 = no change** (original video)
+- **0 = minimum effect** (brightness: very dark, contrast/saturation: minimal)
+- **200 = double effect** (brightness: 2x brighter, contrast/saturation: 2x stronger)
+
+### **Outputs**
+
+* `output_path` – Full path to the processed video file
+* `info` – Metadata string with applied parameters and audio info
+
+### **How it works**
+
+1. Uses ffprobe to extract video metadata (FPS, duration, resolution, audio presence)
+2. Converts 0-100 scale parameters to FFmpeg filter values
+3. Builds FFmpeg filter chain with `eq` filter (brightness/contrast) and `hue` filter (saturation)
+4. Processes video with FFmpeg while preserving original audio stream
+5. Optionally deletes the original file if `delete_original = True`
+6. Returns path to the adjusted video file
+
+### **FFmpeg Filter Chain**
+
+```
+-vf "eq=brightness={b_value}:contrast={c_value},hue=s={sat_value}"
+```
+
+Where:
+- `brightness`: -1.0 (very dark) to 1.0 (very bright)
+- `contrast`: 0.0 to 2.0 (0 = no contrast, 1.0 = original)
+- `saturation`: 0.0 to 2.0 (0 = grayscale, 1.0 = original)
+
+### **Audio Handling**
+
+* Automatically detects audio streams in the input video
+* Uses `-c:a copy` to preserve audio without re-encoding (lossless)
+* Works with any audio codec supported by FFmpeg
+* Audio duration matches video duration
+
+### **Use Cases**
+
+* Color grading video clips
+* Brightening/darkening entire video sequences
+* Increasing saturation for more vivid colors
+* Reducing saturation for desaturated looks
+* Batch processing multiple video files
+
+</details>
+
 
 # 📦 **Installation**
 
