@@ -5,6 +5,20 @@
 A collection of lightweight, production-ready **video manipulation nodes for ComfyUI**.
 All nodes operate on **batched IMAGE tensors (B, H, W, C)** and are designed for smooth, high-quality transformations without breaking aspect ratio.
 
+## 🚀 GPU Acceleration Support
+
+Select nodes now support **NVIDIA GPU-accelerated encoding** with automatic CPU fallback:
+- **ImageTransitionNode** – Optional `use_gpu` parameter (hevc_nvenc, 5-10x faster)
+- **VideoImageOverlay** – Optional `use_gpu` parameter (hevc_nvenc, 4-8x faster)
+- **VideoSplitterNode** – Optional `use_gpu` parameter (hevc_nvenc, 5-10x faster)
+- **VideoLoopExtenderNode** – Built-in `use_gpu` parameter (hevc_nvenc, 5-10x faster)
+- **ComfyVideoCombiner** – Built-in `use_gpu` parameter (h264_nvenc, default enabled)
+- **ColorAdjustmentVideoNode** – Built-in `use_gpu` parameter (hevc_nvenc, default enabled)
+
+**Note:** GPU encoding defaults to `use_gpu=False` (conservative) for new Phase 2 nodes. Users can opt-in for 5-10x speedup. If NVIDIA GPU is unavailable or NVENC fails, the node automatically falls back to libx264.
+
+---
+
 This bundle includes:
 
 <details>
