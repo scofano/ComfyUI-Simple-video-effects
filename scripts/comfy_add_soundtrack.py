@@ -1,6 +1,7 @@
 import os
 import ffmpeg
 from pathlib import Path
+import comfy.utils
 
 class ComfyAddSoundtrack:
     """
@@ -138,6 +139,7 @@ class ComfyAddSoundtrack:
         output_path = self.get_unique_filename(output_path)
 
         try:
+            pbar = comfy.utils.ProgressBar(1)
             print("Starting soundtrack addition processing...")
             # Load inputs
             video = ffmpeg.input(video_path)
@@ -153,6 +155,7 @@ class ComfyAddSoundtrack:
             out = ffmpeg.output(video.video, mixed_audio, output_path, vcodec="libx264", acodec="aac")
             out = out.overwrite_output()
             out.run(quiet=True)
+            pbar.update(1)
             print("Soundtrack addition processing complete.")
 
         except ffmpeg.Error as e:

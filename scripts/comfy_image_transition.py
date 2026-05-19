@@ -6,13 +6,7 @@ import numpy as np
 from PIL import Image, ImageDraw
 import subprocess
 import shutil
-
-# tqdm for progress
-try:
-    from tqdm import tqdm
-except ImportError:
-    def tqdm(x, *args, **kwargs):
-        return x
+import comfy.utils
 
 # ComfyUI folder_paths
 try:
@@ -117,7 +111,8 @@ class ImageTransitionNode:
             frames_dir = tmpdir / "frames"
             frames_dir.mkdir()
 
-            for i in tqdm(range(total_frames), desc="Generating frames"):
+            pbar = comfy.utils.ProgressBar(total_frames)
+            for i in range(total_frames):
                 progress = i / (total_frames - 1) if total_frames > 1 else 1.0
 
                 # Create mask: black for img1, white for img2
@@ -158,6 +153,7 @@ class ImageTransitionNode:
 
                 # Save frame
                 frame.save(frames_dir / f"frame_{i:06d}.png")
+                pbar.update(1)
 
             # Encode to MP4
             cmd = [

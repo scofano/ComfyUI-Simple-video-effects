@@ -3,6 +3,7 @@ import subprocess
 from pathlib import Path
 import tempfile
 import ffmpeg
+import comfy.utils
 
 class VideoLoopExtenderNode:
     """
@@ -137,8 +138,10 @@ class VideoLoopExtenderNode:
         stream = stream.overwrite_output()
 
         try:
+            pbar = comfy.utils.ProgressBar(1)
             print(f"Extending video loop: duplicating '{video_path}' {extend_factor} times...")
             ffmpeg.run(stream, quiet=True)
+            pbar.update(1)
             print("Video loop extension completed.")
         except ffmpeg.Error as e:
             msg = e.stderr.decode() if getattr(e, "stderr", None) else str(e)

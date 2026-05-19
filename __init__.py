@@ -22,6 +22,7 @@ from .scripts.comfy_add_soundtrack import ComfyAddSoundtrack
 from .scripts.comfy_image_audio_csv import ComfyImageAudioCSV
 from .scripts.comfy_color_adjustment import ColorAdjustmentNode
 from .scripts.comfy_color_adjustment_video import ColorAdjustmentVideoNode
+from .scripts.comfy_chromatic_aberration import ChromaticAberrationNode
 
 
 NODE_CLASS_MAPPINGS = {
@@ -49,6 +50,7 @@ NODE_CLASS_MAPPINGS = {
     "ComfyImageAudioCSV": ComfyImageAudioCSV,
     "ColorAdjustmentNode": ColorAdjustmentNode,
     "ColorAdjustmentVideoNode": ColorAdjustmentVideoNode,
+    "ChromaticAberrationNode": ChromaticAberrationNode,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -76,6 +78,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ComfyImageAudioCSV": "Image Audio CSV Generator",
     "ColorAdjustmentNode": "Color Adjustment (Image)",
     "ColorAdjustmentVideoNode": "Color Adjustment (Video File)",
+    "ChromaticAberrationNode": "Chromatic Aberration",
 }
 
 __all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS"]

@@ -1,6 +1,12 @@
 import torch
 import torch.nn.functional as F
 import random
+try:
+    from comfy.utils import ProgressBar
+except ImportError:
+    class ProgressBar:
+        def __init__(self, total): self.total = total
+        def update(self, value): pass
 
 def calculate_face_center(segs):
     """Calculate center point between eyes from SEGS data"""
@@ -147,6 +153,7 @@ class CloseUpImageNode:
 
         # Apply crop and resize back to original dimensions
         out_frames = []
+        pbar = ProgressBar(B)
         for i in range(B):
             frame = images[i]  # (H, W, C)
 
@@ -159,5 +166,6 @@ class CloseUpImageNode:
             resized_frame = resized.squeeze(0).permute(1, 2, 0)  # back to (H, W, C)
 
             out_frames.append(resized_frame)
+            pbar.update(1)
 
         return torch.stack(out_frames, dim=0)

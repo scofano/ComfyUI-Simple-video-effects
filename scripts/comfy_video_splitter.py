@@ -3,6 +3,12 @@ import re
 import shutil
 import subprocess
 from pathlib import Path
+try:
+    from comfy.utils import ProgressBar
+except ImportError:
+    class ProgressBar:
+        def __init__(self, total): self.total = total
+        def update(self, value): pass
 
 # ComfyUI folder_paths
 try:
@@ -187,7 +193,10 @@ class VideoSplitterNode:
         file_counter = 0
         prev_end = 0.0
 
-        for i in range(len(times) - 1):
+        num_segments = len(times) - 1
+        pbar = ProgressBar(num_segments)
+
+        for i in range(num_segments):
             start_time = prev_end
             end_time = times[i + 1]
 
@@ -222,5 +231,6 @@ class VideoSplitterNode:
             subprocess.run(cmd, check=True)
             file_counter += 1
             prev_end = end_time + frame_duration
+            pbar.update(1)
 
         return (str(output_folder),)

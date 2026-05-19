@@ -137,6 +137,9 @@ class ZoomSequenceNode:
         if B <= 0:
             return (images, "Empty batch; nothing to do.")
 
+        import comfy.utils
+        pbar = comfy.utils.ProgressBar(B)
+
         requested_direction = (direction or "Zoom In").strip()
         i_amount_type = normalize_amount_type(amount_type)
         requested_ease = (ease or "Linear").strip()
@@ -215,6 +218,7 @@ class ZoomSequenceNode:
 
         out_frames = []
         for i in range(B):
+            pbar.update(1)
             if smooth_subpixel:
                 zf = margin_to_zoom_factor(m_smalls_f[i], small)
                 out_frames.append(apply_center_zoom_subpixel(images[i], zf, mode="bilinear"))

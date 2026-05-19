@@ -144,7 +144,7 @@ class VideoImageOverlay:
         return cmd
 
     def _run_ffmpeg_with_progress(self, cmd: list) -> None:
-        # Use ComfyUI's ProgressBar instead of tqdm
+        # Use ComfyUI's ProgressBar
         pbar = comfy.utils.ProgressBar(1)
         try:
             result = subprocess.run(

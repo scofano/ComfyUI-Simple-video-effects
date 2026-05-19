@@ -110,6 +110,9 @@ class MergeVideoAudioNode:
 
         output_path = self._resolve_output_path(video_path, output_filename)
 
+        import comfy.utils
+        pbar = comfy.utils.ProgressBar(1)
+
         # Build ffmpeg command
         cmd = [
             "ffmpeg",
@@ -147,4 +150,5 @@ class MergeVideoAudioNode:
                 f"stderr:\n{completed.stderr}"
             )
 
+        pbar.update(1)
         return (output_path,)

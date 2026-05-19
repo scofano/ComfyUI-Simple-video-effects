@@ -1,13 +1,27 @@
-# pyproject.toml
 [project]
-name = "Simple-video-effects"  # Unique and immutable node identifier.
-description = "17 lightweight video manipulation nodes for ComfyUI including zoom, camera movement, overlays, and transitions."
-version = "1.1.0"  # Semantic versioning
-dependencies = []  # Populated from requirements.txt if present.
+name = "simple-video-effects"
+description = "Collection of lightweight video manipulation and utility nodes for ComfyUI including zoom, camera movement, overlays, transitions, audio, and video file tools."
+version = "1.1.0"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { file = "LICENSE" }
+dependencies = [
+    "torch>=1.10",
+    "ffmpeg-python",
+    "soundfile",
+    "numpy",
+    "Pillow",
+]
+classifiers = [
+    "Operating System :: OS Independent",
+]
 
 [project.urls]
 Repository = "https://github.com/scofano/ComfyUI-Simple-video-effects"
+Documentation = "https://github.com/scofano/ComfyUI-Simple-video-effects#readme"
+Issues = "https://github.com/scofano/ComfyUI-Simple-video-effects/issues"
 
 [tool.comfy]
 PublisherId = "dansco"
 DisplayName = "Simple Video Effects"
+Banner = "https://raw.githubusercontent.com/scofano/ComfyUI-Simple-video-effects/main/header.jpg"
