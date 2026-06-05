@@ -208,8 +208,8 @@ class ZoomSequenceVideoNode:
         effective_direction, rolled_direction = resolve_direction_mode(direction, seed_i)
         effective_ease, rolled_random = resolve_ease_mode(ease, seed_i + 1)
 
-        # Create output folder
-        output_dir = Path(OUTPUT_DIR)
+        # Create output folder next to source video
+        output_dir = Path(video_path).parent
         output_dir.mkdir(parents=True, exist_ok=True)
 
         counter = 1

@@ -642,6 +642,7 @@ Takes a video file path and applies smooth zoom in/out effects with aspect corre
 * Extracts frames from input video at original FPS
 * Applies zoom effects using subpixel sampling (default) or classic aspect-corrected crop/resize
 * Re-encodes frames back to video while preserving audio stream
+* Output saved in the same folder as the source video
 * Automatic output filename generation with incrementing numbers
 * Supports configurable zoom speed or target timeline percentage
 
@@ -719,6 +720,7 @@ Takes a video file and SEGS segmentation data to detect eyes, calculates the cen
 * Applies zoom factor centered on the calculated face center
 * Maintains aspect ratio and prevents over-zooming
 * Preserves original audio streams
+* Output saved in the same folder as the source video
 * Automatic output filename generation with incrementing numbers
 
 ### **Requirements**

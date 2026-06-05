@@ -196,8 +196,8 @@ class CloseUpNode:
         # Get video info
         duration, fps, width, height = get_video_info(video_path)
 
-        # Create output folder
-        output_dir = Path(OUTPUT_DIR)
+        # Create output folder next to source video
+        output_dir = Path(video_path).parent
         output_dir.mkdir(parents=True, exist_ok=True)
 
         counter = 1
