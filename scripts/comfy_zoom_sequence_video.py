@@ -23,13 +23,6 @@ from .zoom_core import (
     resolve_seed_value,
 )
 
-# ComfyUI folder_paths
-try:
-    import folder_paths
-    OUTPUT_DIR = folder_paths.get_output_directory()
-except ImportError:
-    OUTPUT_DIR = Path("output")
-
 FFMPEG = shutil.which("ffmpeg")
 FFPROBE = shutil.which("ffprobe")
 if not FFMPEG or not FFPROBE:
