@@ -30,14 +30,13 @@ class ColorAdjustmentNode:
             raise ValueError(f"Expected 4D tensor (B,H,W,C), got shape {images.shape}")
 
         B, H, W, C = images.shape
-        device = images.device
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        using_gpu = device.type == "cuda"
 
-        # Convert brightness/contrast/saturation from 0-100 scale to factors
         brightness_factor = brightness / 100.0
         contrast_factor = contrast / 100.0
         saturation_factor = saturation / 100.0
 
-        # Move to device and apply adjustments (GPU if available)
         output = images.to(device).clone()
 
         # Apply brightness: multiply pixel values
@@ -54,15 +53,17 @@ class ColorAdjustmentNode:
         if saturation_factor != 1.0 and C >= 3:
             output = self._adjust_saturation(output, saturation_factor)
 
-        # Create info string
+        result = output.cpu()
+
+        accel = "GPU" if using_gpu else "CPU"
         info = (
-            f"ColorAdjustment (GPU): {B} frames, "
+            f"ColorAdjustment ({accel}): {B} frames, "
             f"brightness={brightness}, "
             f"contrast={contrast}, "
             f"saturation={saturation}"
         )
 
-        return (output, info)
+        return (result, info)
 
     def _adjust_saturation(self, images: torch.Tensor, saturation_factor: float) -> torch.Tensor:
         """
